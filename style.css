@@ -967,10 +967,86 @@ body {
   color: var(--accent-ink);
 }
 
-.seg-btn.active {
-  background: #1e293b;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(30, 41, 59, 0.25);
+/* 시 분위기 맞춤 TTS 감성 튜닝 박스 */
+.tts-mood-tuning-box {
+  background: #f5efe3;
+  border: 1px solid #e2d7c5;
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.tts-tuning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tuning-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sparkle-icon {
+  font-size: 1rem;
+}
+
+.tuning-title {
+  font-family: var(--font-serif);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.toggle-switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-switch-wrap input[type="checkbox"] {
+  accent-color: var(--accent-gold);
+  cursor: pointer;
+}
+
+.tts-params-display {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.param-badge {
+  background: #ffffff;
+  border: 1px solid #dfd5c3;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.param-name {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.param-val {
+  font-size: 0.82rem;
+  color: var(--accent-ink);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .voice-actions-row {
