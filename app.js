@@ -1,9 +1,10 @@
 /**
- * 시원(詩苑) - 한국 서정시 창작소 통합 애플리케이션 로직 (app.js)
+ * 시원(詩苑) - 한국 서정시 창작소 통합 애플리케이션 로직 (public/app.js)
  * 
- * [동작 모드 안내]
- * 1. 백엔드 서버 구동 시: Node.js 서버의 .env 키를 사용하여 Server-to-Server 비공개 통신 (키 노출 0%)
- * 2. GitHub Pages 정적 배포 시: 방문자 개인 API Key(LocalStorage) 연동 또는 체험용 데모 모드로 자동 작동
+ * [주요 기능]
+ * 1. 구글 유튜브 기반 분위기별 보컬 없는 연주곡(BGM) 자동 재생 & 음량/영상 컨트롤
+ * 2. 시 낭송 맞춤 성우 시스템: 성별(여/남) × 연령대(20대/40대/60대) 맞춤 낭독 & 오디오 더킹
+ * 3. 보안 백엔드(.env) & GitHub Pages 정적 배포 완전 지원
  */
 
 // =========================================================
@@ -12,6 +13,7 @@
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
+  // 백엔드 & API 상태
   isBackendOnline: false,
   hasServerKey: false,
   clientKey: localStorage.getItem(CLIENT_STORAGE_KEY) || '',
@@ -19,11 +21,54 @@ const state = {
   selectedMood: 'nostalgic',
   currentPoem: null,
   isGenerating: false,
+
+  // 유튜브 BGM 상태
+  ytPlayer: null,
+  isYtApiReady: false,
+  isBgmPlaying: false,
+  bgmVolume: 35,
+  currentBgmVideoId: '',
+
+  // 성우 낭송 상태
+  voiceGender: 'female',
+  voiceAge: 40,
   isSpeaking: false,
+  originalBgmVolBeforeDucking: 35,
+
+  // 빗소리
   isRainPlaying: false
 };
 
-// 감성 단어 추천 사전
+// 분위기별 유튜브 BGM 트랙 매핑 (보컬 없는 고품질 서정 연주곡)
+const MOOD_BGM_TRACKS = {
+  nostalgic: {
+    videoId: 'r13T2c0bK2Q',
+    title: '한국 전통 서정 선율 (가야금 & 대금 인스트루멘탈)',
+    moodLabel: '김소월 풍 (아련한 그리움)'
+  },
+  contemplative: {
+    videoId: 'IV8LO-T66ys',
+    title: '별빛 밤의 고요한 사색 (서정 피아노)',
+    moodLabel: '윤동주 풍 (순결한 자아 성찰)'
+  },
+  nature: {
+    videoId: 'd9O9u28P9wE',
+    title: '청산(靑山)의 바람과 자연 선율 (국악 힐링)',
+    moodLabel: '박목월 풍 (담백한 자연과 고향)'
+  },
+  comfort: {
+    videoId: '1E0942rV2i4',
+    title: '따스한 위로의 선율 (피아노 & 첼로)',
+    moodLabel: '정호승 풍 (따스한 온기와 위로)'
+  },
+  romantic: {
+    videoId: '5qap5aO4i9A',
+    title: '봄날의 설렘 (따스한 어쿠스틱 기타 선율)',
+    moodLabel: '나태주 풍 (풋풋한 첫사랑의 설렘)'
+  }
+};
+
+// 감성 단어 추천 세트
 const POETIC_WORD_SETS = [
   ['밤바다', '윤슬', '그리움', '편지', '별빛'],
   ['낙엽', '발자국', '안개', '침묵', '찻잔'],
@@ -33,7 +78,7 @@ const POETIC_WORD_SETS = [
   ['서리꽃', '새벽', '외투', '온기', '먼산']
 ];
 
-// 분위기별 가이드
+// 분위기별 프롬프트 가이드
 const MOOD_PROMPTS = {
   nostalgic: '김소월 시인 특유의 민조적 율격과 한(恨), 아련한 그리움과 애틋함의 정서',
   contemplative: '윤동주 시인 특유의 순결한 자아 성찰, 부끄러움 없는 삶을 향한 고요한 밤과 별빛의 시선',
@@ -69,14 +114,30 @@ const poemAuthorTag = document.getElementById('poemAuthorTag');
 const poemBody = document.getElementById('poemBody');
 const poemNotes = document.getElementById('poemNotes');
 const poemActions = document.getElementById('poemActions');
-
-// 부가 기능 버튼
-const ambientSoundBtn = document.getElementById('ambientSoundBtn');
-const readPoemBtn = document.getElementById('readPoemBtn');
 const copyPoemBtn = document.getElementById('copyPoemBtn');
 const downloadImageBtn = document.getElementById('downloadImageBtn');
 
-// 보안 모달 및 클라이언트 키 영역
+// 유튜브 BGM 제어 요소
+const bgmTrackTitle = document.getElementById('bgmTrackTitle');
+const bgmPlayToggleBtn = document.getElementById('bgmPlayToggleBtn');
+const bgmPlayIcon = document.getElementById('bgmPlayIcon');
+const bgmPlayText = document.getElementById('bgmPlayText');
+const bgmVideoToggleBtn = document.getElementById('bgmVideoToggleBtn');
+const bgmVolumeSlider = document.getElementById('bgmVolumeSlider');
+const bgmVolumeText = document.getElementById('bgmVolumeText');
+const bgmAutoPlayCheck = document.getElementById('bgmAutoPlayCheck');
+const youtubePlayerContainer = document.getElementById('youtubePlayerContainer');
+
+// 성우 낭송 제어 요소
+const voiceGenderGroup = document.getElementById('voiceGenderGroup');
+const voiceAgeGroup = document.getElementById('voiceAgeGroup');
+const previewVoiceBtn = document.getElementById('previewVoiceBtn');
+const readPoemBtn = document.getElementById('readPoemBtn');
+const readPoemIcon = document.getElementById('readPoemIcon');
+const readPoemText = document.getElementById('readPoemText');
+
+// 상단 도구 & 모달
+const ambientSoundBtn = document.getElementById('ambientSoundBtn');
 const apiModal = document.getElementById('apiModal');
 const openApiModalBtn = document.getElementById('openApiModalBtn');
 const closeApiModalBtn = document.getElementById('closeApiModalBtn');
@@ -93,17 +154,346 @@ const toggleKeyVisibility = document.getElementById('toggleKeyVisibility');
 const toast = document.getElementById('toast');
 
 // =========================================================
-// 3. 초기화 및 백엔드 보안 점검
+// 3. YouTube IFrame API 초기화 및 BGM 제어
+// =========================================================
+window.onYouTubeIframeAPIReady = function() {
+  state.isYtApiReady = true;
+  initYouTubePlayer();
+};
+
+function initYouTubePlayer() {
+  const defaultTrack = MOOD_BGM_TRACKS[state.selectedMood] || MOOD_BGM_TRACKS.nostalgic;
+  state.currentBgmVideoId = defaultTrack.videoId;
+  updateBgmTitleUI(defaultTrack.title);
+
+  try {
+    state.ytPlayer = new YT.Player('youtubeIframeTarget', {
+      height: '100%',
+      width: '100%',
+      videoId: defaultTrack.videoId,
+      playerVars: {
+        autoplay: 0,
+        controls: 1,
+        rel: 0,
+        modestbranding: 1,
+        loop: 1,
+        playlist: defaultTrack.videoId
+      },
+      events: {
+        onReady: onPlayerReady,
+        onStateChange: onPlayerStateChange,
+        onError: onPlayerError
+      }
+    });
+  } catch (err) {
+    console.warn('YouTube Player 초기화 대기 중:', err);
+  }
+}
+
+function onPlayerReady(event) {
+  event.target.setVolume(state.bgmVolume);
+}
+
+function onPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.PLAYING) {
+    state.isBgmPlaying = true;
+    bgmPlayIcon.textContent = '⏸️';
+    bgmPlayText.textContent = 'BGM 일시정지';
+    bgmPlayToggleBtn.classList.add('playing');
+  } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+    state.isBgmPlaying = false;
+    bgmPlayIcon.textContent = '▶️';
+    bgmPlayText.textContent = 'BGM 재생';
+    bgmPlayToggleBtn.classList.remove('playing');
+  }
+}
+
+function onPlayerError(err) {
+  console.warn('YouTube 재생 오류 (백그라운드 대체):', err);
+}
+
+function updateBgmTitleUI(title) {
+  if (bgmTrackTitle) {
+    bgmTrackTitle.textContent = title;
+  }
+}
+
+// BGM 재생/일시정지 토글
+function toggleBgm() {
+  if (!state.ytPlayer || typeof state.ytPlayer.playVideo !== 'function') {
+    showToast('배경음악 플레이어를 준비하는 중입니다...');
+    return;
+  }
+
+  if (state.isBgmPlaying) {
+    state.ytPlayer.pauseVideo();
+    showToast('배경음악을 일시정지했습니다 ⏸️');
+  } else {
+    state.ytPlayer.playVideo();
+    showToast('유튜브 서정 연주곡을 재생합니다 🎵');
+  }
+}
+
+// 선택된 분위기 BGM으로 교체 및 자동 재생
+function switchBgmForMood(mood, autoPlay = false) {
+  const track = MOOD_BGM_TRACKS[mood] || MOOD_BGM_TRACKS.nostalgic;
+  updateBgmTitleUI(track.title);
+
+  if (!state.ytPlayer || typeof state.ytPlayer.loadVideoById !== 'function') {
+    state.currentBgmVideoId = track.videoId;
+    return;
+  }
+
+  if (state.currentBgmVideoId !== track.videoId) {
+    state.currentBgmVideoId = track.videoId;
+    if (autoPlay) {
+      state.ytPlayer.loadVideoById({
+        videoId: track.videoId,
+        startSeconds: 0
+      });
+      state.ytPlayer.setVolume(state.bgmVolume);
+    } else {
+      state.ytPlayer.cueVideoById({
+        videoId: track.videoId,
+        startSeconds: 0
+      });
+    }
+  } else if (autoPlay && !state.isBgmPlaying) {
+    state.ytPlayer.playVideo();
+  }
+}
+
+// 음량 변경
+function handleVolumeChange(e) {
+  const vol = parseInt(e.target.value, 10);
+  state.bgmVolume = vol;
+  bgmVolumeText.textContent = `${vol}%`;
+  if (state.ytPlayer && typeof state.ytPlayer.setVolume === 'function') {
+    state.ytPlayer.setVolume(vol);
+  }
+}
+
+// 영상 접기/펼치기 토글
+function toggleVideoContainer() {
+  const isHidden = youtubePlayerContainer.classList.contains('hidden');
+  if (isHidden) {
+    youtubePlayerContainer.classList.remove('hidden');
+    bgmVideoToggleBtn.querySelector('span').textContent = '📺 영상 접기';
+  } else {
+    youtubePlayerContainer.classList.add('hidden');
+    bgmVideoToggleBtn.querySelector('span').textContent = '📺 영상 보기';
+  }
+}
+
+// =========================================================
+// 4. 성우 낭송 (남/여, 20대/40대/60대) 시스템 & 오디오 더킹
+// =========================================================
+
+// 최적의 한국어 음성 및 성별 매칭
+function resolveKoreanVoice(gender) {
+  if (!('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  const koVoices = voices.filter(v => v.lang.includes('ko') || v.lang.includes('KO'));
+
+  if (koVoices.length === 0) return null;
+
+  if (gender === 'male') {
+    // 남성 전용 자연 음성 검색 (Edge InJoon, Google 등)
+    const naturalMale = koVoices.find(v => 
+      v.name.includes('InJoon') || 
+      v.name.toLowerCase().includes('male') || 
+      v.name.includes('남성')
+    );
+    if (naturalMale) {
+      return { voice: naturalMale, isNaturalMale: true };
+    }
+    // 남성 음성이 미설치된 브라우저 환경에서는 피치를 낮추어 남성 톤 합성
+    return { voice: koVoices[0], isNaturalMale: false };
+  } else {
+    // 여성 전용 자연 음성 검색 (SunHi, Heami, Yuna 등)
+    const naturalFemale = koVoices.find(v => 
+      v.name.includes('SunHi') || 
+      v.name.includes('Heami') || 
+      v.name.includes('Yuna') || 
+      v.name.toLowerCase().includes('female') ||
+      v.name.includes('Google')
+    );
+    return { voice: naturalFemale || koVoices[0], isNaturalMale: false };
+  }
+}
+
+// 연령대 및 성별에 따른 정밀 피치(Pitch) & 속도(Rate) 산출
+function computeVoiceProfile(gender, age) {
+  const voiceData = resolveKoreanVoice(gender);
+  const isNaturalMale = voiceData ? voiceData.isNaturalMale : false;
+
+  let pitch = 1.0;
+  let rate = 0.82;
+
+  if (gender === 'female') {
+    if (age === 20) {
+      // 20대 여성: 맑고 청초하며 다정한 톤
+      pitch = 1.16;
+      rate = 0.88;
+    } else if (age === 40) {
+      // 40대 여성: 차분하고 우아하며 성숙한 톤 (기본)
+      pitch = 0.98;
+      rate = 0.80;
+    } else {
+      // 60대 여성: 깊이 있고 세월의 온기를 담은 고즈넉한 톤
+      pitch = 0.82;
+      rate = 0.70;
+    }
+  } else {
+    // 남성
+    if (isNaturalMale) {
+      if (age === 20) {
+        // 20대 남성: 담백하고 부드러운 청년의 목소리
+        pitch = 1.06;
+        rate = 0.88;
+      } else if (age === 40) {
+        // 40대 남성: 묵직하고 신뢰감 있는 중저음
+        pitch = 0.90;
+        rate = 0.78;
+      } else {
+        // 60대 남성: 연륜과 사유가 깃든 원로 시인의 그윽한 목소리
+        pitch = 0.78;
+        rate = 0.68;
+      }
+    } else {
+      // 합성 톤 (시스템에 여성 음성만 있을 때 남성 톤 연출)
+      if (age === 20) {
+        pitch = 0.75;
+        rate = 0.88;
+      } else if (age === 40) {
+        pitch = 0.64;
+        rate = 0.78;
+      } else {
+        pitch = 0.52;
+        rate = 0.68;
+      }
+    }
+  }
+
+  return {
+    voice: voiceData ? voiceData.voice : null,
+    pitch,
+    rate
+  };
+}
+
+// 오디오 더킹: 낭송 시작 시 BGM 볼륨 감소, 낭송 종료 시 원상복구
+function applyAudioDucking(enable) {
+  if (!state.ytPlayer || typeof state.ytPlayer.setVolume !== 'function') return;
+
+  if (enable) {
+    state.originalBgmVolBeforeDucking = state.bgmVolume;
+    // BGM을 은은하게 10% 수준으로 자동 감소 (성우 목소리 선명 청취)
+    state.ytPlayer.setVolume(Math.min(10, Math.floor(state.bgmVolume * 0.3)));
+  } else {
+    // 원래 볼륨으로 복원
+    state.ytPlayer.setVolume(state.originalBgmVolBeforeDucking);
+  }
+}
+
+// 목소리 미리듣기 (샘플 문장 낭독)
+function previewVoiceActor() {
+  if (!('speechSynthesis' in window)) {
+    showToast('현재 브라우저가 음성 합성을 지원하지 않습니다.');
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  stopSpeakingUI();
+
+  const genderName = state.voiceGender === 'female' ? '여성' : '남성';
+  const ageName = `${state.voiceAge}대`;
+  const sampleText = `안녕하세요. ${ageName} ${genderName} 성우입니다. 마음에 닿는 아름다운 시를 낭송해 드리겠습니다.`;
+
+  const utterance = new SpeechSynthesisUtterance(sampleText);
+  utterance.lang = 'ko-KR';
+
+  const profile = computeVoiceProfile(state.voiceGender, state.voiceAge);
+  if (profile.voice) utterance.voice = profile.voice;
+  utterance.pitch = profile.pitch;
+  utterance.rate = profile.rate;
+
+  showToast(`[${genderName} ${ageName}] 성우의 목소리를 미리 듣습니다 🎧`);
+  window.speechSynthesis.speak(utterance);
+}
+
+// 시 낭송 시작 / 중지 토글
+function toggleSpeech() {
+  if (!('speechSynthesis' in window)) {
+    showToast('현재 브라우저가 음성 합성을 지원하지 않습니다.');
+    return;
+  }
+
+  if (state.isSpeaking) {
+    window.speechSynthesis.cancel();
+    stopSpeakingUI();
+    applyAudioDucking(false);
+    return;
+  }
+
+  if (!state.currentPoem) return;
+
+  const fullText = `${state.currentPoem.title}.\n\n${state.currentPoem.body}`;
+  const utterance = new SpeechSynthesisUtterance(fullText);
+  utterance.lang = 'ko-KR';
+
+  const profile = computeVoiceProfile(state.voiceGender, state.voiceAge);
+  if (profile.voice) utterance.voice = profile.voice;
+  utterance.pitch = profile.pitch;
+  utterance.rate = profile.rate;
+
+  utterance.onstart = () => {
+    state.isSpeaking = true;
+    readPoemIcon.textContent = '⏹️';
+    readPoemText.textContent = '낭송 멈춤';
+    readPoemBtn.classList.add('speaking');
+    applyAudioDucking(true);
+    const genderName = state.voiceGender === 'female' ? '여성' : '남성';
+    showToast(`[${state.voiceAge}대 ${genderName} 성우] 목소리로 시를 낭송합니다...`);
+  };
+
+  utterance.onend = () => {
+    stopSpeakingUI();
+    applyAudioDucking(false);
+  };
+
+  utterance.onerror = () => {
+    stopSpeakingUI();
+    applyAudioDucking(false);
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function stopSpeakingUI() {
+  state.isSpeaking = false;
+  readPoemIcon.textContent = '🎙️';
+  readPoemText.textContent = '시 낭송 듣기';
+  readPoemBtn.classList.remove('speaking');
+}
+
+// =========================================================
+// 5. 초기화 및 백엔드 보안 점검
 // =========================================================
 async function init() {
   setupEventListeners();
-  
-  // 오늘 날짜 표기
+
   const today = new Date();
   poemDate.textContent = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
 
-  // 서버 백엔드 연결 확인
   await checkBackendStatus();
+
+  // 음성 목록 비동기 로드 대응
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
+  }
 }
 
 async function checkBackendStatus() {
@@ -134,12 +524,10 @@ async function checkBackendStatus() {
       return;
     }
   } catch (e) {
-    // 백엔드 없이 정적 웹(GitHub Pages 등)으로 열렸을 때
     state.isBackendOnline = false;
     state.hasServerKey = false;
   }
 
-  // GitHub Pages 정적 모드 안내 활성화
   setupStaticPagesMode();
 }
 
@@ -159,7 +547,6 @@ function setupStaticPagesMode() {
   }
 }
 
-// 토스트 메시지
 function showToast(message, duration = 2600) {
   toast.textContent = message;
   toast.classList.remove('hidden');
@@ -169,10 +556,67 @@ function showToast(message, duration = 2600) {
 }
 
 // =========================================================
-// 4. 이벤트 리스너 등록
+// 6. 이벤트 리스너 등록
 // =========================================================
 function setupEventListeners() {
-  // 모달 제어
+  // 유튜브 BGM 컨트롤
+  bgmPlayToggleBtn.addEventListener('click', toggleBgm);
+  bgmVideoToggleBtn.addEventListener('click', toggleVideoContainer);
+  bgmVolumeSlider.addEventListener('input', handleVolumeChange);
+
+  // 성우 낭송 설정 (성별 선택)
+  voiceGenderGroup.addEventListener('click', (e) => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    voiceGenderGroup.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.voiceGender = btn.dataset.gender;
+    showToast(`성우 성별: [${btn.textContent.trim()}] 설정됨`);
+  });
+
+  // 성우 낭송 설정 (연령대 선택)
+  voiceAgeGroup.addEventListener('click', (e) => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    voiceAgeGroup.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.voiceAge = parseInt(btn.dataset.age, 10);
+    showToast(`성우 연령대: [${btn.textContent.trim()}] 설정됨`);
+  });
+
+  // 성우 미리듣기 & 낭송 시작
+  previewVoiceBtn.addEventListener('click', previewVoiceActor);
+  readPoemBtn.addEventListener('click', toggleSpeech);
+
+  // 분위기 셀렉트 변경 시 BGM 트랙 동기화
+  poemMoodSelect.addEventListener('change', (e) => {
+    state.selectedMood = e.target.value;
+    switchBgmForMood(state.selectedMood, false);
+  });
+
+  // 🎲 추천 단어 무작위 채우기
+  randomWordsBtn.addEventListener('click', () => {
+    const randomSet = POETIC_WORD_SETS[Math.floor(Math.random() * POETIC_WORD_SETS.length)];
+    wordInputs.forEach((input, index) => {
+      input.value = randomSet[index];
+    });
+    showToast('감성 시어 5개가 추천되었습니다 🎲');
+  });
+
+  geminiModelSelect.addEventListener('change', (e) => {
+    state.selectedModel = e.target.value;
+  });
+
+  // 서정시 짓기 버튼
+  generatePoemBtn.addEventListener('click', handleGeneratePoem);
+
+  // 텍스트 복사 & 이미지 저장
+  copyPoemBtn.addEventListener('click', copyPoemToClipboard);
+  downloadImageBtn.addEventListener('click', downloadPoemCardImage);
+
+  // 빗소리 & 모달
+  ambientSoundBtn.addEventListener('click', toggleRainSound);
+
   openApiModalBtn.addEventListener('click', () => {
     if (!state.isBackendOnline && apiKeyInput) {
       apiKeyInput.value = state.clientKey;
@@ -190,7 +634,7 @@ function setupEventListeners() {
       state.clientKey = inputVal;
       if (inputVal) {
         localStorage.setItem(CLIENT_STORAGE_KEY, inputVal);
-        showToast('Gemini API 키가 안전하게 저장되었습니다 🔑');
+        showToast('Gemini API 키가 저장되었습니다 🔑');
       } else {
         localStorage.removeItem(CLIENT_STORAGE_KEY);
         showToast('API 키가 비어있어 데모 모드로 동작합니다.');
@@ -222,43 +666,10 @@ function setupEventListeners() {
   apiModal.addEventListener('click', (e) => {
     if (e.target === apiModal) apiModal.classList.add('hidden');
   });
-
-  // 🎲 추천 단어 무작위 채우기
-  randomWordsBtn.addEventListener('click', () => {
-    const randomSet = POETIC_WORD_SETS[Math.floor(Math.random() * POETIC_WORD_SETS.length)];
-    wordInputs.forEach((input, index) => {
-      input.value = randomSet[index];
-    });
-    showToast('감성 시어 5개가 추천되었습니다 🎲');
-  });
-
-  // 모델 및 분위기 셀렉트
-  geminiModelSelect.addEventListener('change', (e) => {
-    state.selectedModel = e.target.value;
-  });
-
-  poemMoodSelect.addEventListener('change', (e) => {
-    state.selectedMood = e.target.value;
-  });
-
-  // 서정시 짓기 버튼
-  generatePoemBtn.addEventListener('click', handleGeneratePoem);
-
-  // 시 낭송 듣기 (TTS)
-  readPoemBtn.addEventListener('click', toggleSpeech);
-
-  // 텍스트 클립보드 복사
-  copyPoemBtn.addEventListener('click', copyPoemToClipboard);
-
-  // 시 카드 이미지 저장
-  downloadImageBtn.addEventListener('click', downloadPoemCardImage);
-
-  // 빗소리 앰비언트 사운드
-  ambientSoundBtn.addEventListener('click', toggleRainSound);
 }
 
 // =========================================================
-// 5. 시 생성 핸들러 (보안 백엔드 or 클라이언트 Gemini API or 데모)
+// 7. 시 생성 핸들러 (BGM 자동 플레이 연동)
 // =========================================================
 async function handleGeneratePoem() {
   const words = wordInputs.map(input => input.value.trim()).filter(w => w.length > 0);
@@ -285,7 +696,7 @@ async function handleGeneratePoem() {
   try {
     let result = null;
 
-    // 1순위: 백엔드 서버가 온라인이고 서버 키가 있는 경우 (보안 백엔드 호출)
+    // 1순위: 백엔드 보안 호출
     if (state.isBackendOnline && state.hasServerKey) {
       const response = await fetch('/api/generate-poem', {
         method: 'POST',
@@ -307,23 +718,28 @@ async function handleGeneratePoem() {
       renderPoem(result, words, true);
       showToast('🔒 보안 백엔드를 통해 안전하게 시가 창작되었습니다.');
     }
-    // 2순위: GitHub Pages 환경 등에서 클라이언트 키가 등록된 경우
+    // 2순위: GitHub Pages 클라이언트 키
     else if (!state.isBackendOnline && state.clientKey && state.clientKey.trim().length > 5) {
       result = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey);
       renderPoem(result, words, true);
       showToast('Google Gemini AI를 통해 실시간 시가 창작되었습니다 ✨');
     }
-    // 3순위: 키가 없는 경우 감성 데모 템플릿 엔진으로 창작
+    // 3순위: 데모 템플릿
     else {
       await new Promise(r => setTimeout(r, 1100));
       result = generateDemoPoem(words, state.selectedMood);
       renderPoem(result, words, false);
       showToast('전통 서정시 데모 모드로 생성되었습니다.');
     }
+
+    // 시 창작 성공 시: 체크되어 있으면 분위기에 맞는 유튜브 BGM 자동 재생!
+    if (bgmAutoPlayCheck.checked) {
+      switchBgmForMood(state.selectedMood, true);
+    }
+
   } catch (error) {
     console.error('시 생성 오류:', error);
     showToast(`오류 발생: ${error.message}`);
-    // 실패 시 사용자 경험을 위해 데모 시 렌더링
     const fallbackPoem = generateDemoPoem(words, state.selectedMood);
     renderPoem(fallbackPoem, words, false);
   } finally {
@@ -333,9 +749,7 @@ async function handleGeneratePoem() {
   }
 }
 
-// =========================================================
-// 6. 클라이언트 직접 Gemini API 호출 (GitHub Pages 모드 지원)
-// =========================================================
+// 클라이언트 Gemini API 호출
 async function callClientGeminiApi(words, model, mood, apiKey) {
   const moodDesc = MOOD_PROMPTS[mood] || MOOD_PROMPTS.nostalgic;
 
@@ -377,7 +791,6 @@ async function callClientGeminiApi(words, model, mood, apiKey) {
     body: JSON.stringify(payload)
   });
 
-  // gemini-3.8-flash 404 폴백
   if (!response.ok && response.status === 404 && model === 'gemini-3.8-flash') {
     const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     response = await fetch(fallbackEndpoint, {
@@ -432,7 +845,7 @@ function parsePoem(rawText) {
 }
 
 // =========================================================
-// 7. 데모 모드 템플릿 엔진
+// 8. 데모 모드 템플릿 엔진
 // =========================================================
 function generateDemoPoem(words, mood) {
   const [w1, w2, w3, w4, w5] = words;
@@ -469,7 +882,7 @@ function generateDemoPoem(words, mood) {
 }
 
 // =========================================================
-// 8. 시 렌더링 및 하이라이팅
+// 9. 시 렌더링 및 하이라이팅
 // =========================================================
 function renderPoem(poemData, words, isLiveAI = false) {
   state.currentPoem = poemData;
@@ -508,53 +921,8 @@ function escapeRegex(string) {
 }
 
 // =========================================================
-// 9. 부가 기능 (낭송 TTS, 복사, 이미지 저장, 빗소리)
+// 10. 시 텍스트 복사 및 캔버스 카드 이미지 저장
 // =========================================================
-
-function toggleSpeech() {
-  if (!('speechSynthesis' in window)) {
-    showToast('현재 브라우저가 음성 합성을 지원하지 않습니다.');
-    return;
-  }
-
-  if (state.isSpeaking) {
-    window.speechSynthesis.cancel();
-    state.isSpeaking = false;
-    readPoemBtn.innerHTML = '<span>🎙️ 낭송 듣기</span>';
-    return;
-  }
-
-  if (!state.currentPoem) return;
-
-  const fullText = `${state.currentPoem.title}.\n\n${state.currentPoem.body}`;
-  const utterance = new SpeechSynthesisUtterance(fullText);
-  utterance.lang = 'ko-KR';
-  utterance.rate = 0.82;
-  utterance.pitch = 0.95;
-
-  const voices = window.speechSynthesis.getVoices();
-  const koVoice = voices.find(v => v.lang.includes('ko') || v.lang.includes('KO'));
-  if (koVoice) utterance.voice = koVoice;
-
-  utterance.onstart = () => {
-    state.isSpeaking = true;
-    readPoemBtn.innerHTML = '<span>⏹️ 낭송 멈춤</span>';
-    showToast('차분한 목소리로 시를 낭송합니다...');
-  };
-
-  utterance.onend = () => {
-    state.isSpeaking = false;
-    readPoemBtn.innerHTML = '<span>🎙️ 낭송 듣기</span>';
-  };
-
-  utterance.onerror = () => {
-    state.isSpeaking = false;
-    readPoemBtn.innerHTML = '<span>🎙️ 낭송 듣기</span>';
-  };
-
-  window.speechSynthesis.speak(utterance);
-}
-
 function copyPoemToClipboard() {
   if (!state.currentPoem) return;
 
@@ -645,7 +1013,7 @@ function downloadPoemCardImage() {
 }
 
 // ---------------------------------------------------------
-// 10. Web Audio API 빗소리 신디사이저
+// 11. Web Audio API 빗소리 신디사이저 (보조 앰비언트)
 // ---------------------------------------------------------
 let audioCtx = null;
 let rainGainNode = null;

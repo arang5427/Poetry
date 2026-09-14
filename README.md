@@ -1,8 +1,31 @@
 # 시원 (詩苑) - 한국 서정시 창작소 🌸
-### Google Gemini 보안 백엔드 아키텍처 탑재
+### Google Gemini 보안 백엔드 · 유튜브 BGM · 다채로운 맞춤 성우 낭송 탑재
 
 마음에 머무는 다섯 개의 단어를 입력받아, 한국 전통의 깊은 여운을 지닌 현대 서정시를 창작해 주는 웹 서비스입니다.  
-**정보보안 지침을 철저히 준수**하여 Google Gemini API 키가 브라우저나 웹 클라이언트에 절대 노출되지 않도록 **보안 백엔드(Server-to-Server)** 구조로 설계되었습니다.
+**정보보안 지침을 철저히 준수**하여 Google Gemini API 키가 웹 클라이언트에 절대 노출되지 않도록 **보안 백엔드(Server-to-Server)** 구조로 설계되었으며, **분위기별 유튜브 배경음악 자동 재생**과 **성우 맞춤형(남/여, 20대/40대/60대) 낭송** 기능이 탑재되어 있습니다.
+
+---
+
+## ✨ 새로운 핵심 기능
+
+### 1. 🎵 구글 유튜브 분위기 BGM (보컬 없는 연주곡) 자동 재생
+* **시풍 맞춤형 엄선 연주곡**: 시의 분위기에 따라 보컬이 없는 정갈한 인스트루멘탈 트랙을 자동 매칭합니다:
+  * **김소월 풍 (아련한 그리움)**: 한국 전통 가야금 & 대금 서정 연주
+  * **윤동주 풍 (순결한 자아 성찰)**: 별빛 밤의 고요한 클래식 피아노
+  * **박목월 풍 (담백한 자연과 고향)**: 청산(靑山)의 바람과 자연 힐링 선율
+  * **정호승 풍 (따스한 온기와 위로)**: 따뜻한 첼로 & 피아노 멜로디
+  * **나태주 풍 (풋풋한 첫사랑의 설렘)**: 봄날의 어쿠스틱 기타 선율
+* **스마트 자동 재생**: [서정시 짓기]로 새로운 시가 완성되면 분위기에 맞는 유튜브 배경음악이 자동으로 은은하게 흘러나옵니다.
+* **플레이어 제어**: 음악 재생/일시정지, 음량 슬라이더 조절, 유튜브 영상 팝업 열기/접기를 지원합니다.
+
+### 2. 🎙️ 시 낭송 성우 맞춤 설정 (성별 × 연령대 6종 프로필)
+* **성별 선택**: `👩 여성 성우` / `👨 남성 성우`
+* **연령대 선택**:
+  * `🌱 20대 (청년)`: 맑고 청초하며 다정한 목소리
+  * `🌿 40대 (중년)`: 차분하고 성숙하며 신뢰감 있는 목소리
+  * `🌾 60대 (노년)`: 깊은 연륜과 사유가 깃든 원로 시인의 그윽한 목소리
+* **🎧 목소리 미리듣기**: 낭송 전 각 성우의 톤을 미리 청취할 수 있습니다.
+* **오디오 더킹 (Audio Ducking)**: 시 낭송이 시작되면 유튜브 배경음악 볼륨이 자동으로 낮아져 성우의 낭독이 또렷하게 들리고, 낭송이 끝나면 BGM 볼륨이 원래대로 복원됩니다.
 
 ---
 
@@ -10,88 +33,42 @@
 
 ```mermaid
 flowchart LR
-    A["웹 브라우저 (사용자)"] -->|"단어 5개 + 모델 선택\n(API Key 노출 없음)"| B["Node.js 보안 백엔드 (Express)"]
-    B -->|".env 파일에서\n암호화 비밀키 로드"| C[("비공개 .env 환경변수")]
-    B -->|"Server-to-Server 비공개 호출\n(헤더/키 비공개)"| D["Google Gemini AI API"]
-    D -->|"창작된 시 텍스트 응답"| B
-    B -->|"시 제목 & 본문만 전달"| A
+    A["웹 브라우저 (방문자)"] -->|"단어 5개 + 모델 선택\n(API Key 절대 노출 없음)"| B["Node.js 보안 백엔드 (Express)"]
+    B -->|".env 파일에서\n비밀키 비공개 로드"| C[("🔒 로컬 .env")]
+    B -->|"Server-to-Server 비공개 통신\n(구글 API 직접 호출)"| D["Google Gemini AI API"]
+    D -->|"시 결과 응답"| B
+    B -->|"창작된 시 본문만 전달"| A
 ```
 
-### 1. 보안 핵심 원칙
-* **프론트엔드 비노출 (Zero Key Exposure)**: 웹 브라우저의 소스 코드(HTML/JS) 및 개발자 도구(F12 Network 탭) 어디에도 Google API Key가 일체 전송되거나 노출되지 않습니다.
-* **환경변수 파일 분리 (`.env`)**: 실제 비밀 키는 서버 로컬의 `.env` 파일에만 보관됩니다.
-* **Git 누출 차단 (`.gitignore`)**: `.gitignore`에 `.env`, `*.env`가 등록되어 있어 GitHub 등 원격 저장소에 절대 업로드되지 않습니다.
-* **DDoS 및 비용 폭탄 방지 (`express-rate-limit`)**: 동일 IP당 15분 내 최대 30회로 요청 횟수를 제한하여 무단 호출 및 오남용을 원천 차단합니다.
-* **보안 헤더 및 입력값 검증 (`helmet` & Payload Sanitize)**: XSS 방지 보안 헤더 및 단어 길이/배열 크기 검증을 수행합니다.
-* **.env 웹 직접 접근 원천 차단**: 브라우저에서 `/.env` 주소로 직접 접근 시 즉시 `403 Forbidden` 차단 처리됩니다.
+* **프론트엔드 비노출 (Zero Key Exposure)**: 소스 코드 및 네트워크 패킷 어디에도 API Key가 노출되지 않습니다.
+* **`.gitignore` 보호**: `.env` 파일은 깃허브 원격 저장소에 절대 커밋되지 않습니다.
+* **DDoS 방어**: `express-rate-limit`으로 15분당 30회 속도 제한 적용.
 
 ---
 
-## 🔑 1. 구글 API 키 등록 방법 (`.env`)
+## 🚀 로컬 실행 방법
 
-1. [Google AI Studio](https://aistudio.google.com/app/apikey)에서 무료 API 키를 발급받습니다.
-2. 프로젝트 루트 폴더의 **`.env`** 파일을 메모장이나 에디터로 엽니다.
-3. 아래와 같이 등호(`=`) 뒤에 발급받은 키를 붙여넣고 저장합니다:
-
-```ini
-# .env 파일 내용
-GEMINI_API_KEY=AIzaSy...여기에_발급받은_키_입력
-PORT=3000
-NODE_ENV=development
-```
-
-> **참고**: `.env.example` 파일은 깃허브 공유를 위한 양식 템플릿이며, 실제 키는 반드시 `.env` 파일에만 넣어야 안전합니다.
-
----
-
-## 🚀 2. 로컬 실행 방법
-
-### 의존성 패키지 설치 (최초 1회)
 ```bash
+# 1. 의존성 설치 (최초 1회)
 npm install
-```
 
-### 서버 구동
-```bash
+# 2. 서버 실행
 npm start
 ```
 
-서버가 구동되면 웹 브라우저에서 아래 주소로 접속합니다:
+서버 구동 후 브라우저 접속:
 👉 **`http://localhost:3000`**
 
 ---
 
-## 🌐 3. 다른 사람들에게 웹 서비스로 배포하는 방법
+## 🌐 GitHub Pages (`https://arang5427.github.io/Poetry/`) 업데이트 방법
 
-GitHub Pages는 정적 파일(HTML/JS)만 호스팅하므로 백엔드(`.env`)를 실행할 수 없습니다.  
-다른 사람들이 접속하여 안전하게 사용할 수 있도록 하려면 **무료 백엔드 클라우드 호스팅(Render, Railway, Glitch 등)**에 배포하는 것을 권장합니다:
-
-### [추천] Render (render.com) 무료 배포 (5분 완성)
-1. 코드를 GitHub 저장소에 올립니다 (이때 `.env`는 `.gitignore` 덕분에 자동으로 제외됩니다).
-2. [Render.com](https://render.com) 무료 가입 후 **`New +` > `Web Service`** 클릭
-3. GitHub의 `Poetry` 저장소를 연결합니다.
-4. 설정값:
-   * **Build Command**: `npm install`
-   * **Start Command**: `node server.js`
-5. **Environment Variables (환경 변수)** 탭에서:
-   * Key: `GEMINI_API_KEY`
-   * Value: 본인의 구글 API 키 값 입력
-6. **Deploy Web Service**를 누르면 끝! 전 세계 누구나 접속할 수 있는 보안 웹 링크(`https://서비스이름.onrender.com`)가 생성됩니다.
-
----
-
-## 📁 프로젝트 파일 구조
-
-```
-anti-vibe/
-├── .env                # 🔒 구글 Gemini API 비밀 키 (Git 배제)
-├── .env.example        # 깃허브 배포용 환경변수 템플릿
-├── .gitignore          # .env 및 node_modules 유출 방지
-├── server.js           # 보안 백엔드 서버 (Express, Helmet, Rate Limiter)
-├── package.json        # 의존성 패키지 설정
-├── public/             # 웹 브라우저 클라이언트 서빙 폴더
-│   ├── index.html      # 정갈한 고가독성 UI
-│   ├── style.css       # 한지 질감 & 고운바탕 서체
-│   └── app.js          # 백엔드 API 연동 (API Key 노출 없음)
-└── README.md           # 프로젝트 안내 및 보안 가이드
-```
+1. 브라우저에서 **[https://github.com/arang5427/Poetry](https://github.com/arang5427/Poetry)** 접속
+2. `Add file` > `Upload files` 클릭
+3. 바탕화면 `anti-vibe` 폴더의 아래 4개 파일을 드래그 앤 드롭:
+   * `index.html`
+   * `style.css`
+   * `app.js`
+   * `README.md`
+   *(⚠️ 주의: 비밀 키가 있는 `.env` 파일은 절대 올리지 마세요)*
+4. 하단 `Commit changes` 클릭 후 1분 뒤 [https://arang5427.github.io/Poetry/](https://arang5427.github.io/Poetry/)에서 확인!
