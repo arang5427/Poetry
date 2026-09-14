@@ -967,6 +967,15 @@ body {
   color: var(--accent-ink);
 }
 
+.google-voice-selector-box {
+  transition: var(--transition);
+}
+
+.google-voice-selector-box:focus-within {
+  border-color: var(--accent-gold) !important;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12) !important;
+}
+
 /* 시 분위기 맞춤 TTS 감성 튜닝 박스 */
 .tts-mood-tuning-box {
   background: #f5efe3;

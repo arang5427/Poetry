@@ -20,7 +20,8 @@ const state = {
   hasServerKey: false,
   clientKey: localStorage.getItem(CLIENT_STORAGE_KEY) || '',
   selectedModel: 'gemini-3.8-flash',
-  selectedMood: 'nostalgic',
+  selectedMood: 'yoon_dongju',
+  selectedVoiceName: 'Iapetus',
   currentPoem: null,
   isGenerating: false,
 
@@ -32,8 +33,8 @@ const state = {
   currentBgmVideoId: '',
 
   // 성우 낭송 및 감성 튜닝 상태
-  voiceGender: 'female',
-  voiceAge: 40,
+  voiceGender: 'male',
+  voiceAge: 20,
   autoMoodTts: true,
   isSpeaking: false,
   originalBgmVolBeforeDucking: 35,
@@ -42,76 +43,780 @@ const state = {
   isRainPlaying: false
 };
 
-// 시 분위기별 감성 TTS 튜닝 사전 (Google TTS 특화)
-const MOOD_TTS_TUNING = {
-  nostalgic: {
-    style: '아련하고 애절한 한(恨)의 여운',
-    pitchOffset: -0.06,
+// =========================================================
+// [핵심] Google TTS 30가지 음성 (voice_name) 정의 및 파라미터 튜닝
+// =========================================================
+const GOOGLE_TTS_VOICES = {
+  Zephyr: {
+    name: 'Zephyr',
+    label: 'Zephyr -- Bright (화사하고 밝음)',
+    gender: 'female',
+    age: 20,
+    trait: 'Bright',
+    traitKo: '화사하고 밝은 음색',
+    pitchOffset: 0.08,
+    rateOffset: 0.04,
+    linePauseMs: 550,
+    stanzaPauseMs: 1000,
+    style: '화사하고 맑게 울리는 밝은 음색',
+    pauseDesc: '1.0초 (산뜻한 호흡)'
+  },
+  Puck: {
+    name: 'Puck',
+    label: 'Puck -- 경쾌함 (재치 있는 리듬)',
+    gender: 'male',
+    age: 20,
+    trait: 'Brisk',
+    traitKo: '발랄하고 경쾌한 낭독',
+    pitchOffset: 0.06,
+    rateOffset: 0.07,
+    linePauseMs: 500,
+    stanzaPauseMs: 950,
+    style: '통통 튀는 경쾌하고 재치 있는 리듬',
+    pauseDesc: '0.95초 (경쾌한 템포)'
+  },
+  Charon: {
+    name: 'Charon',
+    label: 'Charon -- 유용한 정보를 제공함 (차분한 전달력)',
+    gender: 'male',
+    age: 40,
+    trait: 'Informative',
+    traitKo: '차분하고 또박또박한 전달력',
+    pitchOffset: -0.05,
+    rateOffset: -0.02,
+    linePauseMs: 650,
+    stanzaPauseMs: 1200,
+    style: '또박또박하고 차분한 신뢰감의 서술',
+    pauseDesc: '1.2초 (안정적 호흡)'
+  },
+  Kore: {
+    name: 'Kore',
+    label: 'Kore -- Firm (단호하고 결연한 절제미)',
+    gender: 'female',
+    age: 40,
+    trait: 'Firm',
+    traitKo: '절제되고 단호한 어조',
+    pitchOffset: -0.03,
+    rateOffset: -0.04,
+    linePauseMs: 700,
+    stanzaPauseMs: 1300,
+    style: '흔들림 없이 절제되고 결연한 낭독',
+    pauseDesc: '1.3초 (결연한 여운)'
+  },
+  Fenrir: {
+    name: 'Fenrir',
+    label: 'Fenrir -- Excitable (벅찬 감정과 격정적 고조)',
+    gender: 'male',
+    age: 20,
+    trait: 'Excitable',
+    traitKo: '벅찬 감정과 격정적 호흡',
+    pitchOffset: 0.05,
+    rateOffset: 0.06,
+    linePauseMs: 520,
+    stanzaPauseMs: 1000,
+    style: '가슴 벅찬 감정과 역동적인 고조',
+    pauseDesc: '1.0초 (고조된 호흡)'
+  },
+  Leda: {
+    name: 'Leda',
+    label: 'Leda -- Youthful (풋풋하고 순수한 젊은 호흡)',
+    gender: 'female',
+    age: 20,
+    trait: 'Youthful',
+    traitKo: '티 없이 맑은 젊은 호흡',
+    pitchOffset: 0.10,
+    rateOffset: 0.04,
+    linePauseMs: 530,
+    stanzaPauseMs: 980,
+    style: '티 없이 맑고 풋풋한 젊은 서정',
+    pauseDesc: '1.0초 (순수한 호흡)'
+  },
+  Orus: {
+    name: 'Orus',
+    label: 'Orus -- Firm (묵직한 저음과 단단한 의지)',
+    gender: 'male',
+    age: 60,
+    trait: 'Firm',
+    traitKo: '묵직하고 굵은 단호함',
+    pitchOffset: -0.09,
     rateOffset: -0.05,
     linePauseMs: 750,
     stanzaPauseMs: 1400,
-    pauseDesc: '1.4초 (깊은 여운)'
+    style: '묵직한 저음과 단단한 의지의 낭독',
+    pauseDesc: '1.4초 (묵직한 여운)'
   },
-  contemplative: {
-    style: '절제된 고요와 순결한 사색',
-    pitchOffset: 0.00,
+  Aoede: {
+    name: 'Aoede',
+    label: 'Aoede -- Breezy (산들바람처럼 은은한 서정)',
+    gender: 'female',
+    age: 20,
+    trait: 'Breezy',
+    traitKo: '가볍고 은은한 바람의 서정',
+    pitchOffset: 0.04,
+    rateOffset: 0.02,
+    linePauseMs: 600,
+    stanzaPauseMs: 1100,
+    style: '바람처럼 가볍고 은은하게 스치는 서정',
+    pauseDesc: '1.1초 (부드러운 미풍)'
+  },
+  Callirrhoe: {
+    name: 'Callirrhoe',
+    label: 'Callirrhoe -- 느긋함 (유연하고 편안한 긴 호흡)',
+    gender: 'female',
+    age: 40,
+    trait: 'Easygoing',
+    traitKo: '느긋하고 편안한 여유',
+    pitchOffset: -0.03,
+    rateOffset: -0.08,
+    linePauseMs: 800,
+    stanzaPauseMs: 1500,
+    style: '세월을 관조하듯 느긋하고 편안한 호흡',
+    pauseDesc: '1.5초 (느긋한 여운)'
+  },
+  Autonoe: {
+    name: 'Autonoe',
+    label: 'Autonoe -- 밝음 (햇살처럼 환하고 맑음)',
+    gender: 'female',
+    age: 20,
+    trait: 'Bright',
+    traitKo: '햇살처럼 환하고 맑음',
+    pitchOffset: 0.07,
+    rateOffset: 0.03,
+    linePauseMs: 540,
+    stanzaPauseMs: 1020,
+    style: '햇살이 깃든 듯 환하고 따스한 음색',
+    pauseDesc: '1.0초 (환한 호흡)'
+  },
+  Enceladus: {
+    name: 'Enceladus',
+    label: '엔셀라두스 (Enceladus) -- 숨소리 (귓가의 밀어와 속삭임)',
+    gender: 'female',
+    age: 40,
+    trait: 'Breathy',
+    traitKo: '귓가의 숨결과 은밀한 밀어',
+    pitchOffset: -0.04,
+    rateOffset: -0.09,
+    linePauseMs: 850,
+    stanzaPauseMs: 1600,
+    style: '귓가에 나직이 속삭이는 내밀한 숨결',
+    pauseDesc: '1.6초 (내밀한 숨결)'
+  },
+  Iapetus: {
+    name: 'Iapetus',
+    label: 'Iapetus -- Clear (티 없이 맑고 선명함)',
+    gender: 'male',
+    age: 20,
+    trait: 'Clear',
+    traitKo: '선명하고 티 없는 청명함',
+    pitchOffset: 0.02,
+    rateOffset: -0.02,
+    linePauseMs: 650,
+    stanzaPauseMs: 1250,
+    style: '티 없이 맑고 청명한 성찰의 낭독',
+    pauseDesc: '1.25초 (투명한 여운)'
+  },
+  Umbriel: {
+    name: 'Umbriel',
+    label: 'Umbriel -- 느긋함 (고요한 밤의 심연과 그윽함)',
+    gender: 'male',
+    age: 40,
+    trait: 'Relaxed',
+    traitKo: '고요한 밤의 그윽한 사색',
+    pitchOffset: -0.06,
+    rateOffset: -0.08,
+    linePauseMs: 800,
+    stanzaPauseMs: 1500,
+    style: '고요한 밤의 심연을 거니는 그윽한 호흡',
+    pauseDesc: '1.5초 (그윽한 침묵)'
+  },
+  Algieba: {
+    name: 'Algieba',
+    label: 'Algieba -- Smooth (비단결처럼 부드러움)',
+    gender: 'male',
+    age: 40,
+    trait: 'Smooth',
+    traitKo: '매끄럽고 유려한 감성',
+    pitchOffset: 0.01,
+    rateOffset: -0.03,
+    linePauseMs: 620,
+    stanzaPauseMs: 1150,
+    style: '비단결처럼 매끄럽고 유려한 낭송',
+    pauseDesc: '1.15초 (매끄러운 흐름)'
+  },
+  Despina: {
+    name: 'Despina',
+    label: 'Despina -- Smooth (나직하고 감미로운 선율)',
+    gender: 'female',
+    age: 40,
+    trait: 'Smooth',
+    traitKo: '나직하고 감미로운 선율',
+    pitchOffset: 0.03,
     rateOffset: -0.03,
     linePauseMs: 650,
     stanzaPauseMs: 1200,
-    pauseDesc: '1.2초 (차분한 침묵)'
+    style: '가슴을 적시는 감미롭고 부드러운 톤',
+    pauseDesc: '1.2초 (감미로운 여운)'
   },
-  nature: {
-    style: '청명하고 소박한 자연의 숨결',
-    pitchOffset: +0.04,
-    rateOffset: +0.03,
-    linePauseMs: 550,
-    stanzaPauseMs: 1050,
-    pauseDesc: '1.0초 (부드러운 호흡)'
+  Erinome: {
+    name: 'Erinome',
+    label: 'Erinome -- 맑음 (청아한 이슬 울림)',
+    gender: 'female',
+    age: 20,
+    trait: 'Clear',
+    traitKo: '청아한 이슬 같은 맑음',
+    pitchOffset: 0.06,
+    rateOffset: 0.00,
+    linePauseMs: 600,
+    stanzaPauseMs: 1100,
+    style: '아침 이슬처럼 맑고 영롱한 청아함',
+    pauseDesc: '1.1초 (맑은 울림)'
   },
-  comfort: {
-    style: '나직하고 포근한 온기의 속삭임',
-    pitchOffset: -0.04,
+  Algenib: {
+    name: 'Algenib',
+    label: 'Algenib -- 자갈 (거친 자갈밭 같은 민초의 질감)',
+    gender: 'male',
+    age: 60,
+    trait: 'Gravelly',
+    traitKo: '삶의 무게가 실린 거친 질감',
+    pitchOffset: -0.09,
+    rateOffset: -0.06,
+    linePauseMs: 780,
+    stanzaPauseMs: 1450,
+    style: '거친 자갈밭을 딛고 선 민초의 질감',
+    pauseDesc: '1.45초 (투박한 쉼)'
+  },
+  Rasalgethi: {
+    name: 'Rasalgethi',
+    label: 'Rasalgethi -- 유용한 정보를 전달함 (명료한 사유의 낭독)',
+    gender: 'male',
+    age: 40,
+    trait: 'Informative',
+    traitKo: '사유를 정돈하는 명료함',
+    pitchOffset: -0.03,
+    rateOffset: -0.01,
+    linePauseMs: 630,
+    stanzaPauseMs: 1180,
+    style: '사유의 결을 명료하게 짚어주는 낭독',
+    pauseDesc: '1.2초 (명료한 호흡)'
+  },
+  Laomedeia: {
+    name: 'Laomedeia',
+    label: 'Laomedeia -- 경쾌함 (청량한 리듬과 템포)',
+    gender: 'female',
+    age: 20,
+    trait: 'Brisk',
+    traitKo: '산뜻하고 경쾌한 리듬',
+    pitchOffset: 0.05,
+    rateOffset: 0.06,
+    linePauseMs: 510,
+    stanzaPauseMs: 960,
+    style: '발걸음 가볍게 건네는 산뜻한 리듬',
+    pauseDesc: '0.95초 (산뜻한 리듬)'
+  },
+  Achernar: {
+    name: 'Achernar',
+    label: 'Achernar -- Soft (포근하고 애잔한 여운)',
+    gender: 'female',
+    age: 40,
+    trait: 'Soft',
+    traitKo: '포근하고 애절한 부드러움',
+    pitchOffset: -0.03,
+    rateOffset: -0.05,
+    linePauseMs: 720,
+    stanzaPauseMs: 1350,
+    style: '솜털처럼 포근하고 애잔한 여운',
+    pauseDesc: '1.35초 (포근한 여운)'
+  },
+  Alnilam: {
+    name: 'Alnilam',
+    label: 'Alnilam -- Firm (굳센 신념과 꿋꿋한 기백)',
+    gender: 'male',
+    age: 40,
+    trait: 'Firm',
+    traitKo: '굳센 신념과 기백',
+    pitchOffset: -0.07,
+    rateOffset: -0.03,
+    linePauseMs: 700,
+    stanzaPauseMs: 1300,
+    style: '칼날 같은 신념과 굳건한 기백',
+    pauseDesc: '1.3초 (굳건한 호흡)'
+  },
+  Schedar: {
+    name: 'Schedar',
+    label: 'Schedar -- Even (잔잔하고 평온한 균형미)',
+    gender: 'female',
+    age: 40,
+    trait: 'Even',
+    traitKo: '담담하고 평온한 균형',
+    pitchOffset: 0.00,
+    rateOffset: 0.00,
+    linePauseMs: 640,
+    stanzaPauseMs: 1200,
+    style: '파도 없이 잔잔하고 평온한 낭독',
+    pauseDesc: '1.2초 (평온한 쉼)'
+  },
+  Gacrux: {
+    name: 'Gacrux',
+    label: 'Gacrux -- 성인용 (삶의 연륜이 묻어나는 중후함)',
+    gender: 'male',
+    age: 60,
+    trait: 'Mature',
+    traitKo: '삶의 연륜이 묻어나는 중후함',
+    pitchOffset: -0.10,
     rateOffset: -0.07,
-    linePauseMs: 800,
-    stanzaPauseMs: 1500,
-    pauseDesc: '1.5초 (온기 어린 쉼)'
+    linePauseMs: 820,
+    stanzaPauseMs: 1550,
+    style: '깊은 연륜과 원초적 미학의 중후함',
+    pauseDesc: '1.55초 (중후한 여운)'
   },
-  romantic: {
-    style: '미소 띤 첫사랑의 다정한 설렘',
-    pitchOffset: +0.07,
-    rateOffset: +0.05,
+  Pulcherrima: {
+    name: 'Pulcherrima',
+    label: 'Pulcherrima -- 앞으로 (당당하게 뻗어나가는 진취성)',
+    gender: 'female',
+    age: 40,
+    trait: 'Forward',
+    traitKo: '앞으로 뻗어 나가는 울림',
+    pitchOffset: 0.03,
+    rateOffset: 0.03,
+    linePauseMs: 580,
+    stanzaPauseMs: 1080,
+    style: '새벽을 열듯 당당하게 울려 퍼지는 진취성',
+    pauseDesc: '1.1초 (진취적 호흡)'
+  },
+  Achird: {
+    name: 'Achird',
+    label: 'Achird -- 친근함 (오랜 벗처럼 다정한 말투)',
+    gender: 'male',
+    age: 40,
+    trait: 'Friendly',
+    traitKo: '오랜 벗 같은 다정함',
+    pitchOffset: 0.01,
+    rateOffset: -0.01,
+    linePauseMs: 620,
+    stanzaPauseMs: 1150,
+    style: '곁에 앉아 도란도란 들려주는 친근함',
+    pauseDesc: '1.15초 (친근한 쉼)'
+  },
+  Zubenelgenubi: {
+    name: 'Zubenelgenubi',
+    label: 'Zubenelgenubi -- 캐주얼 (자연스러운 일상의 어조)',
+    gender: 'female',
+    age: 20,
+    trait: 'Casual',
+    traitKo: '격식 없는 편안한 어조',
+    pitchOffset: 0.02,
+    rateOffset: 0.02,
+    linePauseMs: 590,
+    stanzaPauseMs: 1100,
+    style: '일상의 숨결처럼 자연스럽고 편안한 말투',
+    pauseDesc: '1.1초 (자연스러운 호흡)'
+  },
+  Vindemiatrix: {
+    name: 'Vindemiatrix',
+    label: 'Vindemiatrix -- 온화함 (감싸 안아주는 자애로움)',
+    gender: 'female',
+    age: 40,
+    trait: 'Gentle',
+    traitKo: '감싸 안아주는 자애로운 온화함',
+    pitchOffset: -0.02,
+    rateOffset: -0.06,
+    linePauseMs: 780,
+    stanzaPauseMs: 1450,
+    style: '상처를 어루만지듯 감싸 안는 자애로움',
+    pauseDesc: '1.45초 (온화한 온기)'
+  },
+  Sadachbia: {
+    name: 'Sadachbia',
+    label: 'Sadachbia -- 활기참 (생동감 넘치는 에너지)',
+    gender: 'female',
+    age: 20,
+    trait: 'Lively',
+    traitKo: '생명력 넘치는 활기',
+    pitchOffset: 0.08,
+    rateOffset: 0.07,
     linePauseMs: 500,
     stanzaPauseMs: 950,
-    pauseDesc: '0.9초 (산뜻한 호흡)'
+    style: '파릇파릇 돋아나는 생명력과 활기',
+    pauseDesc: '0.95초 (활기찬 템포)'
+  },
+  Sadaltager: {
+    name: 'Sadaltager',
+    label: 'Sadaltager -- 지식이 풍부함 (철학적 깊이와 지적 무게)',
+    gender: 'male',
+    age: 60,
+    trait: 'Knowledgeable',
+    traitKo: '철학적 깊이와 지적 무게',
+    pitchOffset: -0.07,
+    rateOffset: -0.05,
+    linePauseMs: 760,
+    stanzaPauseMs: 1400,
+    style: '존재의 심연을 응시하는 지적 사유의 울림',
+    pauseDesc: '1.4초 (깊은 사유)'
+  },
+  Sulafat: {
+    name: 'Sulafat',
+    label: 'Sulafat -- 따뜻함 (마음을 덥혀주는 포근한 온기)',
+    gender: 'female',
+    age: 40,
+    trait: 'Warm',
+    traitKo: '가슴을 덥혀주는 포근한 온기',
+    pitchOffset: -0.01,
+    rateOffset: -0.05,
+    linePauseMs: 750,
+    stanzaPauseMs: 1400,
+    style: '겨울밤 군불처럼 가슴을 덥혀주는 따스함',
+    pauseDesc: '1.4초 (따스한 온기)'
   }
+};
+
+// =========================================================
+// [핵심] 한국 대표 시인 33인 문학 데이터베이스 & Google TTS 매칭
+// =========================================================
+const POET_DATABASE = {
+  // 1. 한국 고전 서정의 명시인 (10인)
+  yoon_dongju: {
+    name: '윤동주',
+    work: '하늘과 바람과 별과 시',
+    desc: '순결한 자아 성찰과 참회의 정신, 부끄러움 없는 삶을 향한 고요한 밤과 별빛의 시선, 맑고 단정한 어조',
+    recommendedVoice: 'Iapetus',
+    recommendedGender: 'male',
+    recommendedAge: 20,
+    bgmKey: 'contemplative'
+  },
+  kim_sowol: {
+    name: '김소월',
+    work: '진달래꽃',
+    desc: '전통 민조적 7·5조 율격과 한(恨), 이별의 애틋한 슬픔과 아련한 그리움, 애절하고 서정적인 가락',
+    recommendedVoice: 'Achernar',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'nostalgic'
+  },
+  na_taeju: {
+    name: '나태주',
+    work: '풀꽃',
+    desc: '소박하고 친근한 일상의 언어, 풀꽃처럼 작고 여린 생명을 향한 다정한 온기와 순수한 사랑',
+    recommendedVoice: 'Sulafat',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'romantic'
+  },
+  park_mokwol: {
+    name: '박목월',
+    work: '나그네',
+    desc: '향토적 서정과 자연의 소박한 정취, 담백하고 절제된 여운, 구름에 달 가듯 유유자적한 발걸음',
+    recommendedVoice: 'Algieba',
+    recommendedGender: 'male',
+    recommendedAge: 40,
+    bgmKey: 'nature'
+  },
+  jung_hoseung: {
+    name: '정호승',
+    work: '사랑하다가 죽어버려라',
+    desc: '상처 입은 영혼을 감싸 안는 따스한 인간애와 연민, 눈물 속에서 피어나는 사랑과 실존적 위로',
+    recommendedVoice: 'Vindemiatrix',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'comfort'
+  },
+  kim_chunsoo: {
+    name: '김춘수',
+    work: '꽃',
+    desc: '존재의 본질과 사물의 명명을 탐구하는 순수 관념시학, 감각적이면서도 철학적인 인식의 시선',
+    recommendedVoice: 'Sadaltager',
+    recommendedGender: 'male',
+    recommendedAge: 60,
+    bgmKey: 'contemplative'
+  },
+  seo_jeongju: {
+    name: '서정주',
+    work: '무서운 시간 / 자화상',
+    desc: '원초적 생명력과 토속적 미학, 무속적·동양적 상상력과 원숙하고 중후한 한국어의 조탁',
+    recommendedVoice: 'Gacrux',
+    recommendedGender: 'male',
+    recommendedAge: 60,
+    bgmKey: 'nostalgic'
+  },
+  shin_kyeongrim: {
+    name: '신경림',
+    work: '갈대',
+    desc: '민초들의 삶의 애환과 연대, 갈대처럼 흔들리면서도 서로를 의지하며 함께 우는 따스한 공동체적 서정',
+    recommendedVoice: 'Charon',
+    recommendedGender: 'male',
+    recommendedAge: 40,
+    bgmKey: 'contemplative'
+  },
+  hwang_donggyu: {
+    name: '황동규',
+    work: '사랑의 전당 / 즐거운 편지',
+    desc: '지적인 사유와 절제된 감정의 기다림, 편지를 쓰듯 건네는 깊이 있는 사랑과 존재의 성찰',
+    recommendedVoice: 'Schedar',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'contemplative'
+  },
+  ahn_dohyun: {
+    name: '안도현',
+    work: '연탄 한 장',
+    desc: '연탄 한 장처럼 자신을 태워 세상을 덥히는 헌신, 다정하고 진솔한 일상 사물에 깃든 감동',
+    recommendedVoice: 'Achird',
+    recommendedGender: 'male',
+    recommendedAge: 40,
+    bgmKey: 'nature'
+  },
+
+  // 2. 사유와 시대의 깊은 울림 (12인)
+  ko_un: {
+    name: '고은',
+    work: '만인보',
+    desc: '역사와 인간 군상의 거친 생명력, 대지의 흙냄새와 민중의 숨결을 품어내는 웅혼하고 파노라마적인 필치',
+    recommendedVoice: 'Algenib',
+    recommendedGender: 'male',
+    recommendedAge: 60,
+    bgmKey: 'contemplative'
+  },
+  yi_sang: {
+    name: '이상',
+    work: '오감도',
+    desc: '전위적 모더니즘과 파격적 실험성, 초현실적 불안과 자아 분열의 심연을 응시하는 날카로운 지성',
+    recommendedVoice: 'Fenrir',
+    recommendedGender: 'male',
+    recommendedAge: 20,
+    bgmKey: 'modern'
+  },
+  han_kang: {
+    name: '한강',
+    work: '서랍에 저녁을 넣어 두었다',
+    desc: '서늘하고 투명한 고통의 심연, 상처 입은 내면과 침묵의 빛을 촛불처럼 밝히는 정밀하고 섬세한 문장',
+    recommendedVoice: 'Enceladus',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'contemplative'
+  },
+  hwang_jiwoo: {
+    name: '황지우',
+    work: '새들도 세상을 뜨는구나',
+    desc: '해체적 풍자와 시대의 억압을 뚫고 솟구치는 파격, 비장함과 절규 속에서 피어나는 자유의 외침',
+    recommendedVoice: 'Pulcherrima',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'modern'
+  },
+  kim_hoon: {
+    name: '김훈',
+    work: '칼의 노래',
+    desc: '불필요한 수사를 걷어낸 서늘하고 단단한 문체, 사물의 물성과 삶의 고독, 명료한 비장미',
+    recommendedVoice: 'Orus',
+    recommendedGender: 'male',
+    recommendedAge: 60,
+    bgmKey: 'comfort'
+  },
+  lee_munjae: {
+    name: '이문재',
+    work: '지금 여기가 맨 앞',
+    desc: '생태적 사유와 공동체적 성찰, 잃어버린 마음의 길을 되찾는 따스하고 담담한 사색',
+    recommendedVoice: 'Rasalgethi',
+    recommendedGender: 'male',
+    recommendedAge: 40,
+    bgmKey: 'contemplative'
+  },
+  yoo_anjin: {
+    name: '유안진',
+    work: '지란지교를 꿈꾸며',
+    desc: '지란지교처럼 맑고 그윽한 영혼의 교감, 품격 있고 단아한 문체로 빚어내는 삶의 온기',
+    recommendedVoice: 'Callirrhoe',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'nostalgic'
+  },
+  choi_seungho: {
+    name: '최승호',
+    work: '대설주의보',
+    desc: '현대 도시 문명의 황폐함과 생태적 위기를 꿰뚫는 서늘하고 단호한 언어, 존재의 허무를 응시하는 눈길',
+    recommendedVoice: 'Kore',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'modern'
+  },
+  shin_dalja: {
+    name: '신달자',
+    work: '열애',
+    desc: '뜨겁고 솔직한 사랑과 고백, 여인의 생애와 고통을 온몸으로 긍정하는 원숙하고 정열적인 어조',
+    recommendedVoice: 'Despina',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'nostalgic'
+  },
+  kim_kyungju: {
+    name: '김경주',
+    work: '나는 이 세상에 없는 계절이다',
+    desc: '세상에 없는 계절을 방랑하는 유목민의 시선, 폭발적인 감각과 환상, 낯설고 매혹적인 언어의 유희',
+    recommendedVoice: 'Aoede',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'modern'
+  },
+  kim_haeja: {
+    name: '김해자',
+    work: '무기여 잘 있거라',
+    desc: '노동과 삶터의 땀방울이 밴 솔직한 숨결, 억척스럽고 꿋꿋하게 삶을 밀고 나가는 민초의 진정성',
+    recommendedVoice: 'Alnilam',
+    recommendedGender: 'male',
+    recommendedAge: 40,
+    bgmKey: 'contemplative'
+  },
+  jo_jeonghwan: {
+    name: '조정환',
+    work: '사유와 실존의 시학',
+    desc: '시대의 모순과 실존을 꿰뚫는 철학적 사유, 깊은 사색과 저항의 언어로 빚어낸 지적 울림',
+    recommendedVoice: 'Sadaltager',
+    recommendedGender: 'male',
+    recommendedAge: 60,
+    bgmKey: 'contemplative'
+  },
+
+  // 3. 현대 문학과 독창적 일상 감성 (6인)
+  park_joon: {
+    name: '박준',
+    work: '당신의 이름을 지어다가 며칠은 먹었다',
+    desc: '쓸쓸한 골목길과 일상의 슬픔, 곁에 머물러 울어주는 다정하고 나직한 문장, 서늘한 미열의 서정',
+    recommendedVoice: 'Umbriel',
+    recommendedGender: 'male',
+    recommendedAge: 40,
+    bgmKey: 'comfort'
+  },
+  kang_hwagil: {
+    name: '강화길',
+    work: '내밀한 심리 서정',
+    desc: '내밀한 불안과 심리적 긴장, 서늘한 고백을 통해 드러나는 여성적 서사와 상처의 결',
+    recommendedVoice: 'Enceladus',
+    recommendedGender: 'female',
+    recommendedAge: 40,
+    bgmKey: 'modern'
+  },
+  moon_boyoung: {
+    name: '문보영',
+    work: '책기둥',
+    desc: '일기체와 상상력의 경계를 넘나드는 유쾌하고 발랄한 언어, 동시대 일상의 독창적 변주',
+    recommendedVoice: 'Puck',
+    recommendedGender: 'male',
+    recommendedAge: 20,
+    bgmKey: 'modern'
+  },
+  choi_jeonghwa: {
+    name: '최정화',
+    work: '모던한 감각과 도시의 시선',
+    desc: '도시의 건조하고 낯선 풍경, 쿨하면서도 서늘하게 파고드는 모던한 감각과 이미지',
+    recommendedVoice: 'Zubenelgenubi',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'modern'
+  },
+  kim_minjung: {
+    name: '김민정',
+    work: '날씨와 생활',
+    desc: '거침없고 솔직한 날것의 어조, 일상의 비루함과 위선을 유쾌하게 전복시키는 리드미컬한 파격',
+    recommendedVoice: 'Laomedeia',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'modern'
+  },
+  kim_yideum: {
+    name: '김이듬',
+    work: '히스테리아',
+    desc: '도발적이고 거침없는 상상력, 억압을 찢고 나오는 생생한 에너지와 전복적 언어의 축제',
+    recommendedVoice: 'Sadachbia',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'modern'
+  },
+
+  // 4. 동시대 청년 신진 시인 (5인)
+  hwang_inchan: {
+    name: '황인찬',
+    work: '기쁜 이와 함께 나를 나눌 것',
+    desc: '군더더기 없는 절제와 투명한 여백, 평범한 일상의 찰나에서 길어 올리는 섬세하고 아름다운 서정',
+    recommendedVoice: 'Zephyr',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'romantic'
+  },
+  yang_anda: {
+    name: '양안다',
+    work: '빛과 매듭',
+    desc: '빛과 어둠, 매듭과 기억이 얽히는 몽환적이고 환상적인 이미지의 미학, 부드러운 환각',
+    recommendedVoice: 'Erinome',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'romantic'
+  },
+  yook_hosoo: {
+    name: '육호수',
+    work: '나는 나비와 날고',
+    desc: '동화적 순수함과 유년의 투명한 환상, 나비처럼 가볍고 맑게 날아오르는 서정적 호흡',
+    recommendedVoice: 'Leda',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'romantic'
+  },
+  kim_bona: {
+    name: '김보나',
+    work: '김근종',
+    desc: '동시대 청년의 감각과 현실을 꾸밈없이 응시하는 솔직하고 담백한 어조, 신선한 시적 호흡',
+    recommendedVoice: 'Autonoe',
+    recommendedGender: 'female',
+    recommendedAge: 20,
+    bgmKey: 'romantic'
+  },
+  kang_woogeun: {
+    name: '강우근',
+    work: '개미 한마리를 실수로 밟을 뻔한 날',
+    desc: '작고 여린 미물도 다치지 않기를 바라는 여리고 다정한 생명 존중, 무해하고 따스한 시선',
+    recommendedVoice: 'Achird',
+    recommendedGender: 'male',
+    recommendedAge: 40,
+    bgmKey: 'nature'
+  },
+
+  // 구버전 호환용 5개 정서 앨리어스
+  nostalgic: { name: '김소월', work: '진달래꽃', desc: '아련한 그리움과 민조적 한', recommendedVoice: 'Achernar', recommendedGender: 'female', recommendedAge: 40, bgmKey: 'nostalgic' },
+  contemplative: { name: '윤동주', work: '하늘과 바람과 별과 시', desc: '순결한 자아 성찰과 별빛', recommendedVoice: 'Iapetus', recommendedGender: 'male', recommendedAge: 20, bgmKey: 'contemplative' },
+  nature: { name: '박목월', work: '나그네', desc: '담백한 자연과 고향의 정취', recommendedVoice: 'Algieba', recommendedGender: 'male', recommendedAge: 40, bgmKey: 'nature' },
+  comfort: { name: '정호승', work: '사랑하다가 죽어버려라', desc: '상처를 어루만지는 따스한 위로', recommendedVoice: 'Vindemiatrix', recommendedGender: 'female', recommendedAge: 40, bgmKey: 'comfort' },
+  romantic: { name: '나태주', work: '풀꽃', desc: '소박하고 다정한 풀꽃의 위로', recommendedVoice: 'Sulafat', recommendedGender: 'female', recommendedAge: 40, bgmKey: 'romantic' }
 };
 
 // 분위기별 유튜브 BGM 트랙 매핑 (보컬 없는 고품질 서정 연주곡)
 const MOOD_BGM_TRACKS = {
-  nostalgic: {
-    videoId: 'r13T2c0bK2Q',
-    title: '한국 전통 서정 선율 (가야금 & 대금 인스트루멘탈)',
-    moodLabel: '김소월 풍 (아련한 그리움)'
-  },
   contemplative: {
     videoId: 'IV8LO-T66ys',
     title: '별빛 밤의 고요한 사색 (서정 피아노)',
-    moodLabel: '윤동주 풍 (순결한 자아 성찰)'
+    moodLabel: '순결한 자아 성찰과 깊은 사유'
+  },
+  nostalgic: {
+    videoId: 'r13T2c0bK2Q',
+    title: '한국 전통 서정 선율 (가야금 & 대금 인스트루멘탈)',
+    moodLabel: '아련한 그리움과 애틋한 한'
   },
   nature: {
     videoId: 'd9O9u28P9wE',
     title: '청산(靑山)의 바람과 자연 선율 (국악 힐링)',
-    moodLabel: '박목월 풍 (담백한 자연과 고향)'
+    moodLabel: '담백한 자연과 고향 길의 정취'
   },
   comfort: {
     videoId: '1E0942rV2i4',
     title: '따스한 위로의 선율 (피아노 & 첼로)',
-    moodLabel: '정호승 풍 (따스한 온기와 위로)'
+    moodLabel: '상처를 어루만지는 온기와 위로'
   },
   romantic: {
     videoId: '5qap5aO4i9A',
     title: '봄날의 설렘 (따스한 어쿠스틱 기타 선율)',
-    moodLabel: '나태주 풍 (풋풋한 첫사랑의 설렘)'
+    moodLabel: '풋풋한 첫사랑과 풀꽃의 다정함'
+  },
+  modern: {
+    videoId: 'IV8LO-T66ys',
+    title: '고요한 밤의 몽환적 선율 (모던 피아노 & 앰비언트)',
+    moodLabel: '현대적 일상과 감각적 사유'
   }
 };
 
@@ -124,15 +829,6 @@ const POETIC_WORD_SETS = [
   ['동백꽃', '달그림자', '물결', '손안개', '기억'],
   ['서리꽃', '새벽', '외투', '온기', '먼산']
 ];
-
-// 분위기별 프롬프트 가이드
-const MOOD_PROMPTS = {
-  nostalgic: '김소월 시인 특유의 민조적 율격과 한(恨), 아련한 그리움과 애틋함의 정서',
-  contemplative: '윤동주 시인 특유의 순결한 자아 성찰, 부끄러움 없는 삶을 향한 고요한 밤과 별빛의 시선',
-  nature: '박목월 시인 특유의 담백한 향토색, 한국 자연의 사계와 고향 길의 소박한 정취',
-  comfort: '정호승 시인 특유의 상처 입은 영혼을 보듬는 따스한 온기와 인간적인 사랑의 위로',
-  romantic: '나태주 시인 특유의 소박하고 다정한 말씨, 풀꽃처럼 피어나는 첫사랑의 설렘과 다정함'
-};
 
 // =========================================================
 // 2. DOM 요소 참조
@@ -175,10 +871,13 @@ const bgmVolumeText = document.getElementById('bgmVolumeText');
 const bgmAutoPlayCheck = document.getElementById('bgmAutoPlayCheck');
 const youtubePlayerContainer = document.getElementById('youtubePlayerContainer');
 
-// 성우 낭송 & 감성 튜닝 제어 요소
+// 성우 낭송 & Google TTS 30 음성 제어 요소
 const voiceGenderGroup = document.getElementById('voiceGenderGroup');
 const voiceAgeGroup = document.getElementById('voiceAgeGroup');
+const googleVoiceSelect = document.getElementById('googleVoiceSelect');
+const voiceTraitBadge = document.getElementById('voiceTraitBadge');
 const autoMoodTtsCheck = document.getElementById('autoMoodTtsCheck');
+const paramVoiceName = document.getElementById('paramVoiceName');
 const paramMoodStyle = document.getElementById('paramMoodStyle');
 const paramPitchVal = document.getElementById('paramPitchVal');
 const paramRateVal = document.getElementById('paramRateVal');
@@ -214,9 +913,11 @@ window.onYouTubeIframeAPIReady = function() {
 };
 
 function initYouTubePlayer() {
-  const defaultTrack = MOOD_BGM_TRACKS[state.selectedMood] || MOOD_BGM_TRACKS.nostalgic;
+  const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
+  const bgmKey = poetInfo.bgmKey || 'contemplative';
+  const defaultTrack = MOOD_BGM_TRACKS[bgmKey] || MOOD_BGM_TRACKS.contemplative;
   state.currentBgmVideoId = defaultTrack.videoId;
-  updateBgmTitleUI(defaultTrack.title);
+  updateBgmTitleUI(`[${poetInfo.name} 풍] ${defaultTrack.title}`);
 
   try {
     state.ytPlayer = new YT.Player('youtubeIframeTarget', {
@@ -286,8 +987,10 @@ function toggleBgm() {
 }
 
 function switchBgmForMood(mood, autoPlay = false) {
-  const track = MOOD_BGM_TRACKS[mood] || MOOD_BGM_TRACKS.nostalgic;
-  updateBgmTitleUI(track.title);
+  const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
+  const bgmKey = poetInfo.bgmKey || 'contemplative';
+  const track = MOOD_BGM_TRACKS[bgmKey] || MOOD_BGM_TRACKS.contemplative;
+  updateBgmTitleUI(`[${poetInfo.name} 풍] ${track.title}`);
 
   if (!state.ytPlayer || typeof state.ytPlayer.loadVideoById !== 'function') {
     state.currentBgmVideoId = track.videoId;
@@ -359,7 +1062,7 @@ function resolveKoreanVoice(gender) {
   } else {
     // 구글 한국어 또는 SunHi, Heami 등 자연스러운 여성 음성
     const naturalFemale = koVoices.find(v => 
-      v.name.includes('Google') ||
+      v.name.includes('Google') || 
       v.name.includes('SunHi') || 
       v.name.includes('Heami') || 
       v.name.includes('Yuna') || 
@@ -369,11 +1072,11 @@ function resolveKoreanVoice(gender) {
   }
 }
 
-// 연령대, 성별, 시의 분위기에 따른 정밀 감성 프로필 산출
-function computeVoiceProfile(gender, age, mood, autoMood = true) {
+// 연령대, 성별, Google TTS 음성에 따른 정밀 감성 프로필 산출
+function computeVoiceProfile(gender, age, voiceName = state.selectedVoiceName, autoMood = true) {
   const voiceData = resolveKoreanVoice(gender);
   const isNaturalMale = voiceData ? voiceData.isNaturalMale : false;
-  const tuning = MOOD_TTS_TUNING[mood] || MOOD_TTS_TUNING.nostalgic;
+  const gVoice = GOOGLE_TTS_VOICES[voiceName] || GOOGLE_TTS_VOICES.Iapetus;
 
   // 기본 연령대 및 성별 베이스라인 피치 & 속도
   let basePitch = 1.0;
@@ -381,7 +1084,7 @@ function computeVoiceProfile(gender, age, mood, autoMood = true) {
 
   if (gender === 'female') {
     if (age === 20) {
-      basePitch = 1.15;
+      basePitch = 1.14;
       baseRate = 0.88;
     } else if (age === 40) {
       basePitch = 0.98;
@@ -393,7 +1096,7 @@ function computeVoiceProfile(gender, age, mood, autoMood = true) {
   } else {
     if (isNaturalMale) {
       if (age === 20) {
-        basePitch = 1.06;
+        basePitch = 1.05;
         baseRate = 0.88;
       } else if (age === 40) {
         basePitch = 0.90;
@@ -420,20 +1123,22 @@ function computeVoiceProfile(gender, age, mood, autoMood = true) {
   let finalRate = baseRate;
   let linePauseMs = 600;
   let stanzaPauseMs = 1200;
-  let styleText = '표준 낭송 호흡';
-  let pauseText = '1.2초 (표준 여운)';
+  let styleText = gVoice.style;
+  let pauseText = gVoice.pauseDesc;
 
-  // 시 분위기 맞춤 자동 감성 조절이 활성화된 경우 파라미터 미세 튜닝
+  // 시풍 및 Google TTS 맞춤 자동 감성 조절이 활성화된 경우 파라미터 미세 튜닝
   if (autoMood) {
-    finalPitch = Math.max(0.4, Math.min(1.8, basePitch + tuning.pitchOffset));
-    finalRate = Math.max(0.5, Math.min(1.4, baseRate + tuning.rateOffset));
-    linePauseMs = tuning.linePauseMs;
-    stanzaPauseMs = tuning.stanzaPauseMs;
-    styleText = tuning.style;
-    pauseText = tuning.pauseDesc;
+    finalPitch = Math.max(0.4, Math.min(1.8, basePitch + gVoice.pitchOffset));
+    finalRate = Math.max(0.5, Math.min(1.4, baseRate + gVoice.rateOffset));
+    linePauseMs = gVoice.linePauseMs;
+    stanzaPauseMs = gVoice.stanzaPauseMs;
+    styleText = gVoice.style;
+    pauseText = gVoice.pauseDesc;
   }
 
   return {
+    voiceName: gVoice.name,
+    voiceLabel: `${gVoice.name} (${gVoice.trait})`,
     voice: voiceData ? voiceData.voice : null,
     pitch: parseFloat(finalPitch.toFixed(2)),
     rate: parseFloat(finalRate.toFixed(2)),
@@ -450,10 +1155,14 @@ function updateTtsTuningDisplay() {
   const profile = computeVoiceProfile(
     state.voiceGender,
     state.voiceAge,
-    state.selectedMood,
+    state.selectedVoiceName,
     state.autoMoodTts
   );
 
+  const gVoice = GOOGLE_TTS_VOICES[state.selectedVoiceName] || GOOGLE_TTS_VOICES.Iapetus;
+
+  if (paramVoiceName) paramVoiceName.textContent = `${gVoice.name} (${gVoice.trait})`;
+  if (voiceTraitBadge) voiceTraitBadge.textContent = `${gVoice.name} · ${gVoice.trait}`;
   if (paramMoodStyle) paramMoodStyle.textContent = profile.style;
 
   const pitchDiff = profile.pitchDiffPercent >= 0 ? `+${profile.pitchDiffPercent}%` : `${profile.pitchDiffPercent}%`;
@@ -486,9 +1195,10 @@ function previewVoiceActor() {
 
   stopSpeakingUI();
 
+  const gVoice = GOOGLE_TTS_VOICES[state.selectedVoiceName] || GOOGLE_TTS_VOICES.Iapetus;
   const genderName = state.voiceGender === 'female' ? '여성' : '남성';
   const ageName = `${state.voiceAge}대`;
-  const sampleText = `안녕하세요. ${ageName} ${genderName} 성우입니다. 시의 분위기에 맞춘 목소리로 낭송해 드리겠습니다.`;
+  const sampleText = `안녕하세요. Google TTS ${gVoice.name} 음성입니다. ${ageName} ${genderName} 성우의 호흡으로 시를 낭송해 드리겠습니다.`;
 
   const utterance = new SpeechSynthesisUtterance(sampleText);
   utterance.lang = 'ko-KR';
@@ -496,7 +1206,7 @@ function previewVoiceActor() {
   const profile = computeVoiceProfile(
     state.voiceGender,
     state.voiceAge,
-    state.selectedMood,
+    state.selectedVoiceName,
     state.autoMoodTts
   );
 
@@ -504,7 +1214,7 @@ function previewVoiceActor() {
   utterance.pitch = profile.pitch;
   utterance.rate = profile.rate;
 
-  showToast(`[${ageName} ${genderName} 성우 · ${profile.style}] 미리듣기 🎧`);
+  showToast(`[Google ${gVoice.name} · ${profile.style}] 미리듣기 🎧`);
   window.speechSynthesis.speak(utterance);
 }
 
@@ -526,12 +1236,13 @@ async function startPoemRecitation() {
   const profile = computeVoiceProfile(
     state.voiceGender,
     state.voiceAge,
-    state.selectedMood,
+    state.selectedVoiceName,
     state.autoMoodTts
   );
 
+  const gVoice = GOOGLE_TTS_VOICES[state.selectedVoiceName] || GOOGLE_TTS_VOICES.Iapetus;
   const genderName = state.voiceGender === 'female' ? '여성' : '남성';
-  showToast(`[${state.voiceAge}대 ${genderName} 성우 · ${profile.style}] 낭송을 시작합니다...`);
+  showToast(`[Google ${gVoice.name} · ${state.voiceAge}대 ${genderName} · ${profile.style}] 낭송을 시작합니다...`);
 
   try {
     // 1. 시 제목 낭독
@@ -629,6 +1340,15 @@ async function init() {
 
   const today = new Date();
   poemDate.textContent = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+
+  if (poemMoodSelect) {
+    state.selectedMood = poemMoodSelect.value || 'yoon_dongju';
+  }
+  const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
+  state.selectedVoiceName = poetInfo.recommendedVoice || 'Iapetus';
+  if (googleVoiceSelect) {
+    googleVoiceSelect.value = state.selectedVoiceName;
+  }
 
   await checkBackendStatus();
   updateTtsTuningDisplay();
@@ -731,13 +1451,33 @@ function setupEventListeners() {
     showToast(`성우 연령대: [${btn.textContent.trim()}] 설정됨`);
   });
 
+  // Google TTS 30가지 음성 수동 선택 리스너
+  if (googleVoiceSelect) {
+    googleVoiceSelect.addEventListener('change', (e) => {
+      state.selectedVoiceName = e.target.value;
+      const gVoice = GOOGLE_TTS_VOICES[state.selectedVoiceName];
+      if (gVoice) {
+        state.voiceGender = gVoice.gender;
+        state.voiceAge = gVoice.age;
+        voiceGenderGroup.querySelectorAll('.seg-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.gender === state.voiceGender);
+        });
+        voiceAgeGroup.querySelectorAll('.seg-btn').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.age, 10) === state.voiceAge);
+        });
+        updateTtsTuningDisplay();
+        showToast(`Google TTS 음성: [${gVoice.label}] 설정됨`);
+      }
+    });
+  }
+
   // 시 분위기 맞춤 자동 튜닝 토글 체크박스
   if (autoMoodTtsCheck) {
     autoMoodTtsCheck.addEventListener('change', (e) => {
       state.autoMoodTts = e.target.checked;
       updateTtsTuningDisplay();
       if (state.autoMoodTts) {
-        showToast('시 분위기 맞춤 Google TTS 자동 튜닝 활성화 ✨');
+        showToast('시풍 맞춤 Google TTS 자동 튜닝 활성화 ✨');
       } else {
         showToast('성우 기본 음높이/속도로 전환되었습니다.');
       }
@@ -748,9 +1488,32 @@ function setupEventListeners() {
   previewVoiceBtn.addEventListener('click', previewVoiceActor);
   readPoemBtn.addEventListener('click', toggleSpeech);
 
-  // 분위기 셀렉트 변경 시 BGM 트랙 및 TTS 튜닝 자동 동기화!
+  // 시풍 및 시인 선택 변경 시 BGM 트랙 및 Google TTS 30 보이스 자동 동기화!
   poemMoodSelect.addEventListener('change', (e) => {
     state.selectedMood = e.target.value;
+    const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
+
+    // 시풍 자동 조절 활성화 시 추천 Google TTS 보이스 및 성별/연령대 자동 전환
+    if (state.autoMoodTts && poetInfo) {
+      if (poetInfo.recommendedVoice && GOOGLE_TTS_VOICES[poetInfo.recommendedVoice]) {
+        state.selectedVoiceName = poetInfo.recommendedVoice;
+        if (googleVoiceSelect) googleVoiceSelect.value = state.selectedVoiceName;
+      }
+      if (poetInfo.recommendedGender) {
+        state.voiceGender = poetInfo.recommendedGender;
+        voiceGenderGroup.querySelectorAll('.seg-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.gender === state.voiceGender);
+        });
+      }
+      if (poetInfo.recommendedAge) {
+        state.voiceAge = poetInfo.recommendedAge;
+        voiceAgeGroup.querySelectorAll('.seg-btn').forEach(b => {
+          b.classList.toggle('active', parseInt(b.dataset.age, 10) === state.voiceAge);
+        });
+      }
+      showToast(`시풍 변경: [${poetInfo.name}] 시인 · Google ${state.selectedVoiceName} 보이스 자동 매칭 ✨`);
+    }
+
     switchBgmForMood(state.selectedMood, false);
     updateTtsTuningDisplay();
   });
@@ -865,7 +1628,8 @@ async function handleGeneratePoem() {
         body: JSON.stringify({
           words,
           model: state.selectedModel,
-          mood: state.selectedMood
+          mood: state.selectedMood,
+          voice_name: state.selectedVoiceName
         })
       });
 
@@ -890,7 +1654,7 @@ async function handleGeneratePoem() {
       await new Promise(r => setTimeout(r, 1100));
       result = generateDemoPoem(words, state.selectedMood);
       renderPoem(result, words, false);
-      showToast('전통 서정시 데모 모드로 생성되었습니다.');
+      showToast('시원(詩苑) 대표 시풍 데모 모드로 생성되었습니다.');
     }
 
     // TTS 감성 튜닝 UI 갱신
@@ -914,14 +1678,19 @@ async function handleGeneratePoem() {
   }
 }
 
-// 클라이언트 Gemini API 호출
+// 클라이언트 Gemini API 호출 (GitHub Pages 정적 모드)
 async function callClientGeminiApi(words, model, mood, apiKey) {
-  const moodDesc = MOOD_PROMPTS[mood] || MOOD_PROMPTS.nostalgic;
+  const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
 
-  const systemInstruction = `당신은 대한민국 대표 서정시인(김소월, 윤동주, 박목월, 정호승, 나태주의 감성을 품은 명시인)입니다.
-사용자가 건넨 다섯 가지 단어의 영혼을 꿰뚫어 보아, 한국 전통의 고즈넉한 여운과 깊은 서정성을 지닌 감동적인 현대 서정시를 창작해 주세요.`;
+  const systemInstruction = `당신은 한국 문학사에 빛나는 명시인들의 시풍과 영혼을 완벽히 체화한 서정시의 대가입니다.
+사용자가 선택한 시인([${poetInfo.name}] - 대표작: '${poetInfo.work}')의 독보적인 문학적 정체성, 특유의 시적 어조, 리듬감, 세계관, 그리고 대표 모티프를 철저히 반영하여, 다섯 단어로 감동적인 한국 현대 서정시를 창작해 주세요.`;
 
   const userPrompt = `
+[창작 대상 시인 및 시풍]
+- 시인: ${poetInfo.name} (대표작: '${poetInfo.work}')
+- 문학적 정서와 스타일: ${poetInfo.desc}
+- 매칭 Google TTS 보이스: ${state.selectedVoiceName}
+
 [선택된 다섯 단어]
 1. ${words[0]}
 2. ${words[1]}
@@ -929,14 +1698,13 @@ async function callClientGeminiApi(words, model, mood, apiKey) {
 4. ${words[3]}
 5. ${words[4]}
 
-[작품 분위기 및 지침]
-- 분위기: ${moodDesc}
-- 지침:
-  1. 시의 맨 첫 줄은 '# [시의 제목]' 형식으로 작성하세요.
-  2. 3~5개의 연으로 구성하고, 연과 연 사이는 빈 줄로 구분하세요.
-  3. 제공된 다섯 단어(${words.join(', ')})를 시 본문 속에 자연스럽고 유려하게 녹여내세요.
-  4. 시 본문이 끝난 뒤에는 '---' 구분선을 넣고, 그 아래에 시인의 짤막한 시작노트(2~3문장의 감상과 창작 의도)를 덧붙여 주세요.
-  5. 군더더기 인사말은 절대 포함하지 마세요.
+[작품 지침]
+1. 시의 맨 첫 줄은 '# [시의 제목]' 형식으로 작성하세요.
+2. 3~5개의 연으로 구성하고, 연과 연 사이는 빈 줄로 구분하세요.
+3. 제공된 다섯 단어(${words.join(', ')})를 시 본문 속에 자연스럽고 유려하게 녹여내세요.
+4. 시의 어조, 행간의 호흡, 사용하는 시어의 결이 반드시 [${poetInfo.name}] 시인의 고유한 서정과 정확히 일치하도록 심혈을 기울여 주세요.
+5. 시 본문이 끝난 뒤에는 '---' 구분선을 넣고, 그 아래에 [${poetInfo.name}] 시인의 시선에서 쓴 짤막한 시작노트(2~3문장의 감상과 창작 의도)를 덧붙여 주세요.
+6. 군더더기 인사말은 절대 포함하지 마세요.
 `;
 
   const payload = {
@@ -1010,40 +1778,75 @@ function parsePoem(rawText) {
 }
 
 // =========================================================
-// 8. 데모 모드 템플릿 엔진
+// 8. 데모 모드 템플릿 엔진 (33인 시인별 맞춤형 서정)
 // =========================================================
 function generateDemoPoem(words, mood) {
   const [w1, w2, w3, w4, w5] = words;
+  const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
 
   const demoTemplates = {
-    nostalgic: {
+    yoon_dongju: {
+      title: `${w1}과 별빛의 시간`,
+      body: `밤하늘 높이 우러른 ${w1} 아래\n차마 부끄러운 고백들이 흩어지고,\n\n가만히 눈감으면 반짝이는 ${w2},\n홀로 걷는 길목마다 드리운 ${w3}은\n어둠을 헤치고 나아갈 등불이 됩니다.\n\n마른 가슴에 띄운 한 조각 ${w4}를 쥐고\n첫 마음처럼 순결한 ${w5}을 맞이할 때,\n비로소 살아 숨 쉬는 자아를 마주합니다.`,
+      notes: `윤동주의 '하늘과 바람과 별과 시' 속 순결한 별빛처럼, 다섯 낱말(${words.join(', ')})로 깊은 내면의 참회를 엮었습니다.`
+    },
+    kim_sowol: {
       title: `${w1}에 띄우는 ${w4}`,
       body: `먼동이 트기 전 가만히 부르면\n이슬 젖은 창턱에 머무는 ${w1},\n\n물결 위를 스쳐 가던 ${w2}처럼\n흘러간 세월은 잡을 길 없고\n가슴 깊이 고여 든 ${w3}만\n바람 끝에 흔들립니다.\n\n적어두지 못한 ${w4} 한 장\n가슴 한 켠에 접어 묻어두니\n어느새 저 하늘에서 내리는 ${w5},\n시린 계절을 따스히 덮어줍니다.`,
-      notes: `${w1}와 ${w2}의 찰나에서 비롯된 그리움이 ${w5}처럼 차분하게 마음에 가라앉는 순간을 노래했습니다.`
+      notes: `김소월 시인의 '진달래꽃'에 깃든 민조적 7·5조 율격과 애절한 한(恨)으로 다섯 단어를 노래했습니다.`
     },
-    contemplative: {
-      title: `${w1}과 고요의 시간`,
-      body: `밤하늘 높이 우러른 ${w1} 아래\n차마 부끄러운 고백들이 흩어지고,\n\n가만히 눈감으면 반짝이는 ${w2},\n홀로 걷는 길목마다 드리운 ${w3}은\n어둠을 헤치고 나아갈 등불이 됩니다.\n\n마른 가슴에 띄운 한 조각 ${w4}를 쥐고\n첫 마음처럼 순결한 ${w5}을 맞이할 때,\n비로소 살아 숨 쉬는 자아를 마주합니다.`,
-      notes: `윤동주의 별빛처럼 순결한 마음을 담아, 다섯 낱말(${words.join(', ')})로 깊은 내면의 소리를 엮었습니다.`
-    },
-    nature: {
-      title: `고향 길, ${w1} 언덕에서`,
-      body: `굽이굽이 산모롱이 돌아가면\n바람결에 피어나는 푸른 ${w1},\n\n개울가 바위 틈에 어린 ${w2} 따라\n송아지 울음소리 아련한 ${w3},\n\n흙 묻은 손으로 엮은 ${w4}가\n새소리에 실려 날아오르면\n산천 가득 피어오르는 ${w5}처럼\n넉넉한 대지가 품을 내어줍니다.`,
-      notes: `박목월의 토속적이고 청명한 시풍으로, 자연의 숨결과 소박한 안식을 다섯 단어 속에 풀어냈습니다.`
-    },
-    comfort: {
-      title: `${w5}이 내리는 창가에서`,
-      body: `울지 마라, 외로우니까 사람이다.\n저물어 가는 ${w1} 저편으로\n눈물방울마다 맺힌 ${w2}이 고와서,\n\n끝내 버리지 못한 질긴 ${w3}도\n서로의 등을 감싸 안는 온기가 된다.\n\n부치지 못한 ${w4}를 품에 안고서\n오늘 밤 소리 없이 내리는 ${w5}을 보라,\n상처 없는 영혼이 어디 있으랴.`,
-      notes: `정호승 시인의 따뜻한 위로처럼, 생의 그늘을 사랑으로 어루만지는 시어들로 엮었습니다.`
-    },
-    romantic: {
+    na_taeju: {
       title: `자세히 보아야 예쁜 ${w2}`,
       body: `풀잎 끝에 맺힌 ${w1}처럼\n너는 가만히 내게 다가왔다.\n\n햇살 부서지는 강가의 ${w2}보다\n더 눈부신 네 눈망울,\n가만히 불러보는 것만으로 벅찬 ${w3}.\n\n수줍게 건네지 못한 작은 ${w4} 속에\n너를 향한 봄날의 ${w5}이 곱게 피어난다.\n\n너는 나에게 참 좋은 사람이다.`,
-      notes: `나태주 시인의 다정하고 소박한 눈길로, 사랑하는 대상을 향한 순수한 설렘을 노래했습니다.`
+      notes: `나태주 시인의 '풀꽃'처럼 소박하고 다정한 눈길로, 대상을 향한 순수한 사랑의 설렘을 담았습니다.`
+    },
+    park_mokwol: {
+      title: `고향 길, ${w1} 언덕에서`,
+      body: `굽이굽이 산모롱이 돌아가면\n바람결에 피어나는 푸른 ${w1},\n\n개울가 바위 틈에 어린 ${w2} 따라\n송아지 울음소리 아련한 ${w3},\n\n흙 묻은 손으로 엮은 ${w4}가\n새소리에 실려 날아오르면\n산천 가득 피어오르는 ${w5}처럼\n넉넉한 대지가 품을 내어줍니다.`,
+      notes: `박목월 시인의 '나그네'처럼 향토적 서정과 자연의 소박한 정취를 다섯 시어에 풀어냈습니다.`
+    },
+    jung_hoseung: {
+      title: `${w5}이 내리는 창가에서`,
+      body: `울지 마라, 외로우니까 사람이다.\n저물어 가는 ${w1} 저편으로\n눈물방울마다 맺힌 ${w2}이 고와서,\n\n끝내 버리지 못한 질긴 ${w3}도\n서로의 등을 감싸 안는 온기가 된다.\n\n부치지 못한 ${w4}를 품에 안고서\n오늘 밤 소리 없이 내리는 ${w5}을 보라,\n상처 없는 영혼이 어디 있으랴.`,
+      notes: `정호승 시인의 '사랑하다가 죽어버려라'처럼, 상처 입은 영혼을 감싸는 온기와 연민을 노래했습니다.`
+    },
+    kim_chunsoo: {
+      title: `${w1}의 이름과 ${w2}`,
+      body: `내가 그의 이름을 불러 주기 전에는\n그는 다만 하나의 몸짓에 지나지 않았다.\n\n어둠 속에서 반짝이는 ${w1},\n그 빛을 향해 떨리는 ${w2}의 그림자.\n\n내가 그의 이름을 불러 주었을 때\n비로소 피어난 아득한 ${w3}은,\n너와 나 사이에 건너간 ${w4}가 되어\n어느 눈부신 ${w5}의 언어로 피어났다.`,
+      notes: `김춘수 시인의 '꽃'처럼, 존재의 본질을 인식하고 명명하는 순수 관념의 시학을 담았습니다.`
+    },
+    yi_sang: {
+      title: `제13인의 ${w1}`,
+      body: `13인의아해가도로로질주하오.\n길은막다른골목이적당하오.\n\n거울속의 ${w1}은왼손잡이오.\n부서지는 ${w2}의파편들,\n분열된내면에서꿈틀거리는 ${w3}.\n\n한장의 ${w4}는불타고있소.\n공포와전율사이로쏟아지는 ${w5},\n그곳에무서운아해와무서워하는아해가있소.`,
+      notes: `이상 시인의 '오감도'처럼 전위적인 파격과 모더니즘의 심연을 다섯 단어로 해체하고 재구성했습니다.`
+    },
+    han_kang: {
+      title: `서랍 속의 ${w1}과 저녁`,
+      body: `서랍 속에 저녁을 넣어 두었다.\n문틈으로 흘러나오는 서늘한 ${w1}.\n\n투명한 유리창에 맺힌 ${w2}을 닦아내면\n말해지지 않은 침묵의 ${w3}이 고이고,\n\n손끝으로 쓸어보는 낡은 ${w4} 한 줄에\n차마 흘리지 못한 ${w5}이 촛불처럼 번진다.\n우리는 고통을 통과해 겨우 빛이 된다.`,
+      notes: `한강 시인의 '서랍에 저녁을 넣어 두었다'처럼, 서늘하고 투명한 고통의 심연과 침묵의 빛을 엮었습니다.`
+    },
+    park_joon: {
+      title: `당신의 ${w1}을 지어다가`,
+      body: `그리움도 오래되면 미열이 된다.\n골목길 가로등 아래 웅크린 ${w1},\n\n물기 묻은 유리창에 비친 ${w2}을 보며\n며칠은 앓았고 며칠은 ${w3}을 삼켰다.\n\n우리가 함께 부치지 못한 ${w4}는\n찬 방바닥 위에 소리 없이 흩어지고,\n첫 새벽 내리는 ${w5}을 이불 삼아\n당신의 이름을 가만히 불러보았다.`,
+      notes: `박준 시인의 '당신의 이름을 지어다가 며칠은 먹었다'처럼, 쓸쓸하고 다정한 일상의 슬픔을 담았습니다.`
+    },
+    hwang_inchan: {
+      title: `기쁜 ${w1}과 여백`,
+      body: `빛이 드는 방에서 우리는 가만히 앉아 있었다.\n탁자 위에 놓인 작은 ${w1},\n\n창밖으로 번지는 맑은 ${w2}을 보며\n말하지 않아도 충분한 ${w3}을 나누었다.\n\n서랍에 넣어 둔 짧은 ${w4}처럼\n지나가는 계절 끝에 내리는 ${w5},\n아름다운 것은 언제나 조용히 도착한다.`,
+      notes: `황인찬 시인의 '기쁜 이와 함께 나를 나눌 것'처럼, 군더더기 없는 절제와 투명한 여백의 서정을 노래했습니다.`
     }
   };
 
-  return demoTemplates[mood] || demoTemplates.nostalgic;
+  if (demoTemplates[mood]) {
+    return demoTemplates[mood];
+  }
+
+  // 그 외 33인 시인들을 위한 정밀 맞춤 생성기
+  return {
+    title: `${poetInfo.name} 풍의 ${w1}과 ${w5}`,
+    body: `바람이 머물다 가는 길목에서\n가만히 흔들리는 ${w1},\n\n지나간 시간의 잔물결 위로\n아스라이 부서지는 ${w2}의 기억들.\n마음의 심연에 고여 든 ${w3}은\n어둠을 밝히는 한 줄기 빛이 된다.\n\n적어두지 못한 ${w4}를 마음에 품고\n다시금 고요히 대지에 내리는 ${w5},\n생의 침묵 속에 가장 순결한 언어로 피어난다.`,
+    notes: `${poetInfo.name} 시인의 대표작 '${poetInfo.work}'의 시풍(${poetInfo.desc})을 기리며, 다섯 단어(${words.join(', ')})로 깊은 서정을 길어 올렸습니다.`
+  };
 }
 
 // =========================================================
@@ -1055,11 +1858,18 @@ function renderPoem(poemData, words, isLiveAI = false) {
   poemTitle.textContent = poemData.title;
   poemNotes.innerHTML = poemData.notes;
 
-  if (isLiveAI) {
+  const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
+  const voiceInfo = GOOGLE_TTS_VOICES[state.selectedVoiceName] || GOOGLE_TTS_VOICES.Iapetus;
+  const voiceDisplayName = poemData.voice_name || state.selectedVoiceName;
+
+  if (poemData.poet) {
+    const modelText = isLiveAI ? geminiModelSelect.options[geminiModelSelect.selectedIndex].text.split(' (')[0] : '시원 AI';
+    poemAuthorTag.textContent = `${poemData.poet} 시풍 · ${modelText} · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
+  } else if (isLiveAI) {
     const modelText = geminiModelSelect.options[geminiModelSelect.selectedIndex].text.split(' (')[0];
-    poemAuthorTag.textContent = `${modelText} 작시`;
+    poemAuthorTag.textContent = `${poetInfo.name} 시풍 · ${modelText} · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
   } else {
-    poemAuthorTag.textContent = `시원(詩苑) 시인`;
+    poemAuthorTag.textContent = `${poetInfo.name} 시풍 · 시원(詩苑) 시인 · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
   }
 
   let formattedBody = escapeHtml(poemData.body);
