@@ -192,6 +192,12 @@
                 <span id="bgmPlayIcon">▶️</span>
                 <span id="bgmPlayText">BGM 재생</span>
               </button>
+              <button id="bgmRefreshBtn" class="bgm-btn secondary" type="button" title="현재 시풍에 맞는 다른 연주곡으로 교체합니다">
+                <span>🔀 다른 BGM</span>
+              </button>
+              <button id="bgmSearchYoutubeBtn" class="bgm-btn secondary" type="button" title="유튜브에서 이 시풍의 연주곡 직접 검색하기">
+                <span>🔍 유튜브 검색</span>
+              </button>
               <button id="bgmVideoToggleBtn" class="bgm-btn secondary" type="button" title="유튜브 영상 보기/접기">
                 <span>📺 영상</span>
               </button>
@@ -210,10 +216,23 @@
             </label>
           </div>
 
+          <!-- BGM 상태 알림 바 (재생 실패 시 자동 복구 알림) -->
+          <div id="bgmStatusAlert" class="bgm-status-alert hidden">
+            <span class="alert-icon">🔀</span>
+            <span id="bgmStatusAlertText" class="alert-text"></span>
+            <button type="button" id="closeBgmAlertBtn" class="alert-close-btn" title="닫기">×</button>
+          </div>
+
           <!-- 접었다 펼칠 수 있는 유튜브 비디오 플레이어 컨테이너 -->
           <div id="youtubePlayerContainer" class="youtube-player-container hidden">
             <div class="video-aspect-wrap">
               <div id="youtubeIframeTarget"></div>
+            </div>
+            <!-- 사용자 맞춤 유튜브 영상 입력 폼 -->
+            <div class="custom-bgm-bar">
+              <span class="custom-bgm-label">🔗 직접 유튜브 곡 지정:</span>
+              <input type="text" id="customBgmInput" placeholder="유튜브 링크(URL) 또는 영상 ID 붙여넣기..." class="custom-bgm-input">
+              <button type="button" id="applyCustomBgmBtn" class="custom-bgm-btn">적용 및 재생</button>
             </div>
           </div>
         </div>
