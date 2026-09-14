@@ -263,11 +263,45 @@
                 </div>
               </div>
 
+              <!-- ✨ 시 분위기 맞춤 TTS 자동 튜닝 상태 표시 바 -->
+              <div class="tts-mood-tuning-box">
+                <div class="tts-tuning-header">
+                  <div class="tuning-title-wrap">
+                    <span class="sparkle-icon">✨</span>
+                    <span class="tuning-title">시 분위기 맞춤 Google TTS 감성 자동 조절</span>
+                  </div>
+                  <label class="toggle-switch-wrap" title="시의 정서(그리움, 사색, 자연, 위로, 설렘)에 맞게 음높이와 낭송 템포를 지능적으로 자동 튜닝합니다">
+                    <input type="checkbox" id="autoMoodTtsCheck" checked>
+                    <span class="switch-label">자동 감성 조절 켜짐</span>
+                  </label>
+                </div>
+
+                <!-- 실시간 반영되는 TTS 파라미터 뱃지들 -->
+                <div class="tts-params-display">
+                  <div class="param-badge">
+                    <span class="param-name">감성 톤</span>
+                    <strong id="paramMoodStyle" class="param-val">아련한 그리움의 여운</strong>
+                  </div>
+                  <div class="param-badge">
+                    <span class="param-name">음높이 (Pitch)</span>
+                    <strong id="paramPitchVal" class="param-val">0.92x (-6%)</strong>
+                  </div>
+                  <div class="param-badge">
+                    <span class="param-name">낭송 속도 (Rate)</span>
+                    <strong id="paramRateVal" class="param-val">0.78x (느긋한 호흡)</strong>
+                  </div>
+                  <div class="param-badge">
+                    <span class="param-name">행간 여운 (Pause)</span>
+                    <strong id="paramPauseVal" class="param-val">1.4초 (깊은 여운)</strong>
+                  </div>
+                </div>
+              </div>
+
               <div class="voice-actions-row">
-                <button id="previewVoiceBtn" class="voice-sub-btn" type="button" title="선택한 성우의 목소리를 미리 들어봅니다">
+                <button id="previewVoiceBtn" class="voice-sub-btn" type="button" title="선택한 성우와 감성 톤의 목소리를 미리 들어봅니다">
                   <span>🎧 목소리 미리듣기</span>
                 </button>
-                <button id="readPoemBtn" class="voice-main-btn" type="button" title="선택한 성우의 목소리로 완성된 시를 낭송합니다">
+                <button id="readPoemBtn" class="voice-main-btn" type="button" title="선택한 성우와 분위기 맞춤 톤으로 시를 낭송합니다">
                   <span id="readPoemIcon">🎙️</span>
                   <span id="readPoemText">시 낭송 듣기</span>
                 </button>
