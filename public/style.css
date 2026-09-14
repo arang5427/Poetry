@@ -1,0 +1,954 @@
+/* =========================================================
+   시원 (詩苑) - 서정시 창작소 스타일 시트 (public/style.css)
+   한국 전통의 고요한 미학과 현대적 고가독성 UI의 융합
+   ========================================================= */
+
+:root {
+  /* 배경 색상 */
+  --bg-main: #f5f2eb;
+  --bg-card: #ffffff;
+  --bg-scroll: #fdfbf7;
+  
+  /* 고대비 텍스트 색상 (가독성 극대화) */
+  --text-primary: #18181b;     /* 선명한 먹물색 (대비율 12:1 이상) */
+  --text-secondary: #3f3f46;   /* 본문 보조 색상 */
+  --text-muted: #71717a;       /* 캡션/안내 문구 */
+  
+  /* 포인트 색상 */
+  --accent-ink: #111827;
+  --accent-red: #991b1b;       /* 전통 인장/낙관 주홍빛 */
+  --accent-gold: #b45309;      /* 고풍스러운 황금빛 */
+  --accent-indigo: #1e3a8a;    /* 시어 하이라이트 인디고 */
+  
+  /* 테두리 & 그림자 */
+  --border-subtle: #e4decb;
+  --border-focus: #2563eb;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 6px 20px rgba(28, 25, 23, 0.07);
+  --shadow-lg: 0 14px 35px rgba(28, 25, 23, 0.11);
+  
+  /* 타이포그래피 */
+  --font-serif: "Gowun Batang", "Noto Serif KR", serif;
+  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 기본 리셋 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 배경 앰비언트 텍스처 */
+.background-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: radial-gradient(#d6cec0 0.85px, transparent 0.85px);
+  background-size: 24px 24px;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-glow {
+  position: fixed;
+  top: -80px;
+  right: -80px;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(235, 219, 195, 0.5) 0%, rgba(245, 242, 235, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------------------------------------------------------
+   1. 상단 네비게이션 헤더 바 (고정 가독성 바)
+   --------------------------------------------------------- */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(245, 242, 235, 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+}
+
+.nav-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-seal {
+  width: 36px;
+  height: 36px;
+  line-height: 34px;
+  text-align: center;
+  border: 2px solid var(--accent-red);
+  color: var(--accent-red);
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 1.15rem;
+  border-radius: 6px;
+  background: rgba(153, 27, 27, 0.05);
+  box-shadow: inset 0 0 4px rgba(153, 27, 27, 0.15);
+}
+
+.brand-title {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.brand-title span {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.brand-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  background: #ffffff;
+  border: 1.5px solid #d4cca9;
+  border-radius: 20px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.control-btn:hover {
+  border-color: #9c8e6f;
+  background: #fdfbf7;
+  transform: translateY(-1px);
+}
+
+.control-btn.active {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #ffffff;
+}
+
+.status-badge {
+  font-size: 0.74rem;
+  padding: 3px 9px;
+  background: #e9e3d0;
+  color: #63532c;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.status-badge.live {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.warn {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* ---------------------------------------------------------
+   2. 메인 컨테이너 & 2열 레이아웃
+   --------------------------------------------------------- */
+.app-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+/* ---------------------------------------------------------
+   3. 좌측 입력 카드
+   --------------------------------------------------------- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: var(--shadow-md);
+}
+
+.section-block {
+  margin-bottom: 24px;
+}
+
+.section-title-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step-badge {
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  background: var(--accent-ink);
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.step-indicator h2 {
+  font-family: var(--font-serif);
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+.btn-text-action {
+  background: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #ddd6fe;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: var(--transition);
+}
+
+.btn-text-action:hover {
+  background: #ddd6fe;
+  color: #4c1d95;
+}
+
+.guide-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding-left: 34px;
+}
+
+/* 5개 단어 입력 2열 그리드 */
+.words-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.input-field.full-width {
+  grid-column: span 2;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+}
+
+.word-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: #fbfaf7;
+  border: 1.5px solid #ded5c2;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-serif);
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+.word-input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.word-input::placeholder {
+  color: #a89f91;
+  font-weight: 400;
+}
+
+/* 옵션 블록 (모델 & 시풍) */
+.options-block {
+  border-top: 1px dashed var(--border-subtle);
+  padding-top: 22px;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.option-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.label-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.version-tip {
+  font-size: 0.74rem;
+  color: #047857;
+  background: #ecfdf5;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.custom-select {
+  width: 100%;
+  padding: 11px 36px 11px 14px;
+  background: #fbfaf7;
+  border: 1.5px solid #ded5c2;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%234b5563%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: var(--transition);
+}
+
+.custom-select:focus {
+  outline: none;
+  background-color: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+/* 생성 실행 버튼 */
+.action-block {
+  margin-top: 10px;
+}
+
+.btn-generate {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  color: #fefefe;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-serif);
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(17, 24, 39, 0.25);
+  transition: var(--transition);
+}
+
+.btn-generate:hover {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.35);
+}
+
+.btn-generate:active {
+  transform: translateY(0);
+}
+
+.btn-generate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---------------------------------------------------------
+   4. 우측 시 전시 카드 (가독성 특화 한지 족자 스타일)
+   --------------------------------------------------------- */
+.poem-display-section {
+  position: sticky;
+  top: 84px;
+}
+
+.poem-scroll-card {
+  background: var(--bg-scroll);
+  border: 1.5px solid #ded5c2;
+  border-radius: var(--radius-lg);
+  padding: 42px 38px;
+  box-shadow: var(--shadow-lg);
+  min-height: 580px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-image: 
+    linear-gradient(rgba(253, 251, 247, 0.8), rgba(253, 251, 247, 0.8)),
+    radial-gradient(#d6cec0 0.75px, transparent 0.75px);
+  background-size: auto, 20px 20px;
+}
+
+.card-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #9c8e6f;
+  margin-bottom: 24px;
+}
+
+.ornament-line {
+  flex: 1;
+  max-width: 90px;
+  height: 1px;
+  background: #cfc5b0;
+}
+
+.ornament-symbol {
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+/* 대기 상태 */
+.poem-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: auto;
+  padding: 40px 10px;
+}
+
+.ink-drop-icon {
+  font-size: 3rem;
+  margin-bottom: 18px;
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+.empty-title {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  margin-bottom: 12px;
+}
+
+.empty-desc {
+  font-family: var(--font-serif);
+  font-size: 1.02rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+/* 로딩 상태 */
+.poem-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+  text-align: center;
+  padding: 40px 10px;
+}
+
+.brush-loader {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.brush-stroke {
+  width: 10px;
+  height: 40px;
+  background: var(--accent-ink);
+  border-radius: 6px;
+  animation: inkFlow 1.2s ease-in-out infinite alternate;
+}
+
+.brush-stroke:nth-child(2) { animation-delay: 0.2s; }
+.brush-stroke:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes inkFlow {
+  0% { transform: scaleY(0.3); opacity: 0.3; }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+
+.loading-message {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: var(--accent-ink);
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.loading-words {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+}
+
+/* 완성된 시 내용 영역 */
+.poem-content-area {
+  animation: fadeIn 0.6s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.poem-header {
+  text-align: center;
+  margin-bottom: 34px;
+  border-bottom: 1.5px solid #e7ded0;
+  padding-bottom: 22px;
+}
+
+.poem-title {
+  font-family: var(--font-serif);
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.poem-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+}
+
+.meta-tag {
+  background: #ede6d6;
+  color: #4b3d1f;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.meta-divider {
+  color: #a89f91;
+}
+
+/* 시 본문 가독성 중심 타이포그래피 */
+.poem-body-wrapper {
+  padding: 0 10px;
+  margin-bottom: 34px;
+}
+
+.poem-body {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 2.3;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+/* 시어 하이라이트 */
+.poem-body .highlight-word {
+  color: var(--accent-indigo);
+  background: rgba(30, 58, 138, 0.08);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 700;
+  border-bottom: 2px solid rgba(30, 58, 138, 0.35);
+}
+
+/* 시인의 시작(詩作) 노트 박스 */
+.notes-container {
+  background: #f8f4ec;
+  border: 1px solid #e7ded0;
+  border-left: 4px solid var(--accent-gold);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  margin-top: 10px;
+}
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.notes-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.poem-notes {
+  font-family: var(--font-serif);
+  font-size: 0.98rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+/* 전통 낙관 도장 */
+.seal-stamp-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
+}
+
+.korean-seal {
+  width: 50px;
+  height: 50px;
+  border: 2.5px solid var(--accent-red);
+  background: rgba(153, 27, 27, 0.04);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(153, 27, 27, 0.12);
+  transform: rotate(-2.5deg);
+}
+
+.seal-inner {
+  font-family: var(--font-serif);
+  color: var(--accent-red);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+/* 하단 액션 버튼 그룹 */
+.poem-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1.5px solid #ded5c2;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 10px 18px;
+  background: #ffffff;
+  border: 1.5px solid #cfc5b0;
+  border-radius: 24px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-btn:hover {
+  background: #fbf9f4;
+  border-color: #9c8e6f;
+  transform: translateY(-2px);
+}
+
+.action-btn.primary {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #ffffff;
+}
+
+.action-btn.primary:hover {
+  background: #0f172a;
+}
+
+/* ---------------------------------------------------------
+   5. 보안 모달 스타일링
+   --------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(17, 24, 39, 0.65);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+}
+
+.modal-box {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  max-width: 540px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: modalScale 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScale {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 26px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-body {
+  padding: 26px;
+}
+
+.security-status-box {
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.security-status-box.warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.status-indicator-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 1.02rem;
+  color: #15803d;
+}
+
+.security-status-box.warn .status-indicator-wrap {
+  color: #b45309;
+}
+
+.status-detail-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.status-detail-text code {
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.88rem;
+}
+
+.security-checklist {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+}
+
+.security-checklist h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  margin-bottom: 12px;
+}
+
+.security-checklist ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.security-checklist li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 26px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-primary {
+  padding: 10px 22px;
+  background: #1e293b;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-primary:hover {
+  background: #0f172a;
+}
+
+/* ---------------------------------------------------------
+   6. 알림 토스트 & 푸터
+   --------------------------------------------------------- */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(17, 24, 39, 0.94);
+  color: #f8fafc;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  z-index: 1000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  animation: toastIn 0.25s ease;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.hidden {
+  display: none !important;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 50px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-family: var(--font-serif);
+}
