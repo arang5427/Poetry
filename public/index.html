@@ -103,25 +103,63 @@
               <div class="select-wrapper">
                 <select id="geminiModelSelect" class="custom-select">
                   <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (최신 차세대 고지능 엔진)</option>
-                  <option value="gemini-2.0-flash">Gemini 2.0 Flash (초고속 플래그십 모델)</option>
-                  <option value="gemini-2.0-pro-exp-02-05">Gemini 2.0 Pro Exp (깊은 문학적 통찰과 사유)</option>
-                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (섬세하고 유려한 전통 시풍)</option>
-                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (경량 및 빠른 응답)</option>
+                  <option value="gemini-3.7-flash">Gemini 3.7 Flash (하이브리드 추론 및 감성 엔진)</option>
+                  <option value="gemini-3.6-flash">Gemini 3.6 Flash (정교하고 빠른 고지능 모델)</option>
+                  <option value="gemini-3.5-flash">Gemini 3.5 Flash (안정적 고속 서정 엔진)</option>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro (깊은 문학적 통찰과 심층 사유)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (경량 및 빠른 응답)</option>
                 </select>
               </div>
             </div>
 
             <div class="option-group">
               <label for="poemMoodSelect" class="option-label">
-                <span class="label-with-icon">🍂 시의 분위기 (정서)</span>
+                <span class="label-with-icon">🍂 시풍 & 시인 선택 (33인의 거장과 청년 시인)</span>
+                <span class="version-tip" style="background: #fef3c7; color: #92400e;">시풍별 음성 자동 매칭</span>
               </label>
               <div class="select-wrapper">
                 <select id="poemMoodSelect" class="custom-select">
-                  <option value="nostalgic">아련한 그리움과 애틋함 (김소월 풍)</option>
-                  <option value="contemplative">별빛과 고요한 자아 성찰 (윤동주 풍)</option>
-                  <option value="nature">담백한 자연과 고향의 정취 (박목월 풍)</option>
-                  <option value="comfort">상처를 어루만지는 따스한 위로 (정호승 풍)</option>
-                  <option value="romantic">풋풋한 첫사랑과 봄날의 설렘 (나태주 풍)</option>
+                  <optgroup label="📜 한국 고전 서정의 명시인 (10인)">
+                    <option value="yoon_dongju" selected>윤동주 · 하늘과 바람과 별과 시 (순결한 자아 성찰과 별빛)</option>
+                    <option value="kim_sowol">김소월 · 진달래꽃 (아련한 그리움과 민조적 한)</option>
+                    <option value="na_taeju">나태주 · 풀꽃 (소박하고 다정한 풀꽃의 위로)</option>
+                    <option value="park_mokwol">박목월 · 나그네 (향토적 서정과 자연의 소박한 정취)</option>
+                    <option value="jung_hoseung">정호승 · 사랑하다가 죽어버려라 (상처를 감싸는 인간적 연민)</option>
+                    <option value="kim_chunsoo">김춘수 · 꽃 (존재의 본질과 인식의 순수 관념)</option>
+                    <option value="seo_jeongju">서정주 · 무서운 시간 / 자화상 (원초적 생명력과 토속적 미학)</option>
+                    <option value="shin_kyeongrim">신경림 · 갈대 (민중의 슬픔과 소박한 연대)</option>
+                    <option value="hwang_donggyu">황동규 · 사랑의 전당 / 즐거운 편지 (지적인 사랑과 기다림)</option>
+                    <option value="ahn_dohyun">안도현 · 연탄 한 장 (따뜻하고 진솔한 일상 서정)</option>
+                  </optgroup>
+                  <optgroup label="🌌 사유와 시대의 깊은 울림 (12인)">
+                    <option value="ko_un">고은 · 만인보 (역사와 인간 군상의 거친 생명력)</option>
+                    <option value="yi_sang">이상 · 오감도 (전위적 파격과 초현실적 내면)</option>
+                    <option value="han_kang">한강 · 서랍에 저녁을 넣어 두었다 (서늘하고 투명한 고통의 시학)</option>
+                    <option value="hwang_jiwoo">황지우 · 새들도 세상을 뜨는구나 (해체적 풍자와 시대의 절규)</option>
+                    <option value="kim_hoon">김훈 · 칼의 노래 (단단하고 군더더기 없는 문체)</option>
+                    <option value="lee_munjae">이문재 · 지금 여기가 맨 앞 (생태적 사유와 공동체적 성찰)</option>
+                    <option value="yoo_anjin">유안진 · 지란지교를 꿈꾸며 (맑고 그윽한 교감과 품격)</option>
+                    <option value="choi_seungho">최승호 · 대설주의보 (도시 문명 비판과 존재의 허무)</option>
+                    <option value="shin_dalja">신달자 · 열애 (뜨겁고 솔직한 사랑과 고백)</option>
+                    <option value="kim_kyungju">김경주 · 나는 이 세상에 없는 계절이다 (감각의 폭발과 방랑)</option>
+                    <option value="kim_haeja">김해자 · 무기여 잘 있거라 (노동과 삶터의 꿋꿋한 진정성)</option>
+                    <option value="jo_jeonghwan">조정환 · 사유와 실존의 시학 (철학적 사유와 저항의 언어)</option>
+                  </optgroup>
+                  <optgroup label="🌿 현대 문학과 독창적 일상 감성 (6인)">
+                    <option value="park_joon">박준 · 당신의 이름을 지어다가 며칠은 먹었다 (쓸쓸하고 다정한 일상의 슬픔)</option>
+                    <option value="kang_hwagil">강화길 · 심리적 긴장과 서늘한 고백 (내밀한 불안과 여성 서정)</option>
+                    <option value="moon_boyoung">문보영 · 책기둥 (발랄한 상상력과 유쾌한 일기체)</option>
+                    <option value="choi_jeonghwa">최정화 · 모던한 감각과 건조한 시선 (도시의 공허와 감각)</option>
+                    <option value="kim_minjung">김민정 · 날씨와 생활 (날것의 솔직함과 당돌한 리듬)</option>
+                    <option value="kim_yideum">김이듬 · 히스테리아 (도발적 에너지와 전복적 상상력)</option>
+                  </optgroup>
+                  <optgroup label="🌱 동시대 청년 신진 시인 (5인)">
+                    <option value="hwang_inchan">황인찬 · 기쁜 이와 함께 나를 나눌 것 (섬세하고 절제된 여백의 시학)</option>
+                    <option value="yang_anda">양안다 · 빛과 매듭 (환상적인 빛과 몽환적 서정)</option>
+                    <option value="yook_hosoo">육호수 · 나는 나비와 날고 (투명한 유년과 동화적 상상력)</option>
+                    <option value="kim_bona">김보나 · 김근종 (동시대 청년의 감각과 솔직한 어조)</option>
+                    <option value="kang_woogeun">강우근 · 개미 한마리를 실수로 밟을 뻔한 날 (작고 여린 생명을 향한 다정한 응시)</option>
+                  </optgroup>
                 </select>
               </div>
             </div>
@@ -234,12 +272,12 @@
               <div id="poemNotes" class="poem-notes"></div>
             </div>
 
-            <!-- 시 낭송 성우 맞춤 설정 패널 (성별 / 20대·40대·60대 선택) -->
+            <!-- 시 낭송 성우 맞춤 설정 패널 (성별 / 20대·40대·60대 / Google TTS 30가지 음성) -->
             <div class="voice-actor-card">
               <div class="voice-actor-header">
                 <span class="voice-icon">🎙️</span>
-                <strong>시 낭송 성우 설정</strong>
-                <span class="voice-tip">목소리 맞춤형 낭독</span>
+                <strong>시 낭송 성우 & Google TTS 30 음성 설정</strong>
+                <span class="voice-tip">30가지 음성 파라미터 탑재</span>
               </div>
 
               <div class="voice-selectors-grid">
@@ -247,8 +285,8 @@
                 <div class="voice-selector-item">
                   <span class="selector-label">성별 선택</span>
                   <div class="segmented-control" id="voiceGenderGroup">
-                    <button type="button" class="seg-btn active" data-gender="female">👩 여성 성우</button>
-                    <button type="button" class="seg-btn" data-gender="male">👨 남성 성우</button>
+                    <button type="button" class="seg-btn" data-gender="female">👩 여성 성우</button>
+                    <button type="button" class="seg-btn active" data-gender="male">👨 남성 성우</button>
                   </div>
                 </div>
 
@@ -256,10 +294,62 @@
                 <div class="voice-selector-item">
                   <span class="selector-label">연령대 선택</span>
                   <div class="segmented-control" id="voiceAgeGroup">
-                    <button type="button" class="seg-btn" data-age="20">🌱 20대 (청년)</button>
-                    <button type="button" class="seg-btn active" data-age="40">🌿 40대 (중년)</button>
+                    <button type="button" class="seg-btn active" data-age="20">🌱 20대 (청년)</button>
+                    <button type="button" class="seg-btn" data-age="40">🌿 40대 (중년)</button>
                     <button type="button" class="seg-btn" data-age="60">🌾 60대 (노년)</button>
                   </div>
+                </div>
+              </div>
+
+              <!-- 🌐 Google Cloud / Gemini TTS 30가지 음성 (voice_name) 선택 -->
+              <div class="google-voice-selector-box" style="margin-top: 14px; margin-bottom: 14px; background: #ffffff; border: 1px solid #ded5c2; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <label for="googleVoiceSelect" style="font-size: 0.82rem; font-weight: 700; color: #18181b; display: flex; align-items: center; gap: 6px;">
+                    <span>🌐 Google TTS 30가지 음성 옵션 (voice_name)</span>
+                  </label>
+                  <span id="voiceTraitBadge" style="font-size: 0.74rem; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Iapetus · Clear</span>
+                </div>
+                <div class="select-wrapper">
+                  <select id="googleVoiceSelect" class="custom-select" style="font-size: 0.88rem; padding: 8px 12px;">
+                    <optgroup label="✨ 밝음 / 경쾌 / 맑음 / 산들바람">
+                      <option value="Zephyr" data-trait="Bright">Zephyr -- Bright (화사하고 밝음)</option>
+                      <option value="Puck" data-trait="Brisk">Puck -- 경쾌함 (재치 있는 리듬)</option>
+                      <option value="Autonoe" data-trait="Bright">Autonoe -- 밝음 (햇살처럼 환하고 맑음)</option>
+                      <option value="Erinome" data-trait="Clear">Erinome -- 맑음 (청아한 이슬 울림)</option>
+                      <option value="Laomedeia" data-trait="Brisk">Laomedeia -- 경쾌함 (청량한 리듬과 템포)</option>
+                      <option value="Sadachbia" data-trait="Lively">Sadachbia -- 활기참 (생동감 넘치는 에너지)</option>
+                      <option value="Aoede" data-trait="Breezy">Aoede -- Breezy (산들바람처럼 은은한 서정)</option>
+                    </optgroup>
+                    <optgroup label="🍃 청명 / 부드러움 / 따스함 / 친근함">
+                      <option value="Iapetus" data-trait="Clear" selected>Iapetus -- Clear (티 없이 맑고 선명함)</option>
+                      <option value="Algieba" data-trait="Smooth">Algieba -- Smooth (비단결처럼 부드러움)</option>
+                      <option value="Despina" data-trait="Smooth">Despina -- Smooth (나직하고 감미로운 선율)</option>
+                      <option value="Achernar" data-trait="Soft">Achernar -- Soft (포근하고 애잔한 여운)</option>
+                      <option value="Sulafat" data-trait="Warm">Sulafat -- 따뜻함 (마음을 덥혀주는 포근한 온기)</option>
+                      <option value="Vindemiatrix" data-trait="Gentle">Vindemiatrix -- 온화함 (감싸 안아주는 자애로움)</option>
+                      <option value="Leda" data-trait="Youthful">Leda -- Youthful (풋풋하고 순수한 젊은 호흡)</option>
+                      <option value="Achird" data-trait="Friendly">Achird -- 친근함 (오랜 벗처럼 다정한 말투)</option>
+                    </optgroup>
+                    <optgroup label="🌌 그윽함 / 고요 / 내밀한 숨소리">
+                      <option value="Callirrhoe" data-trait="Easygoing">Callirrhoe -- 느긋함 (유연하고 편안한 긴 호흡)</option>
+                      <option value="Umbriel" data-trait="Relaxed">Umbriel -- 느긋함 (고요한 밤의 심연과 그윽함)</option>
+                      <option value="Enceladus" data-trait="Breathy">엔셀라두스 (Enceladus) -- 숨소리 (귓가의 밀어와 속삭임)</option>
+                      <option value="Schedar" data-trait="Even">Schedar -- Even (잔잔하고 평온한 균형미)</option>
+                      <option value="Zubenelgenubi" data-trait="Casual">Zubenelgenubi -- 캐주얼 (자연스러운 일상의 어조)</option>
+                    </optgroup>
+                    <optgroup label="🏛️ 단호 / 중후 / 깊은 지성과 기백">
+                      <option value="Kore" data-trait="Firm">Kore -- Firm (단호하고 결연한 절제미)</option>
+                      <option value="Orus" data-trait="Firm">Orus -- Firm (묵직한 저음과 단단한 의지)</option>
+                      <option value="Alnilam" data-trait="Firm">Alnilam -- Firm (굳센 신념과 꿋꿋한 기백)</option>
+                      <option value="Gacrux" data-trait="Mature">Gacrux -- 성인용 (삶의 연륜이 묻어나는 중후함)</option>
+                      <option value="Sadaltager" data-trait="Knowledgeable">Sadaltager -- 지식이 풍부함 (철학적 깊이와 지적 무게)</option>
+                      <option value="Charon" data-trait="Informative">Charon -- 유용한 정보를 제공함 (차분한 신뢰감과 전달력)</option>
+                      <option value="Rasalgethi" data-trait="Informative">Rasalgethi -- 유용한 정보를 전달함 (명료한 사유의 낭독)</option>
+                      <option value="Algenib" data-trait="Gravelly">Algenib -- 자갈 (거친 자갈밭 같은 민초의 질감)</option>
+                      <option value="Fenrir" data-trait="Excitable">Fenrir -- Excitable (벅찬 감정과 격정적 고조)</option>
+                      <option value="Pulcherrima" data-trait="Forward">Pulcherrima -- 앞으로 (당당하게 뻗어나가는 진취성)</option>
+                    </optgroup>
+                  </select>
                 </div>
               </div>
 
@@ -268,40 +358,44 @@
                 <div class="tts-tuning-header">
                   <div class="tuning-title-wrap">
                     <span class="sparkle-icon">✨</span>
-                    <span class="tuning-title">시 분위기 맞춤 Google TTS 감성 자동 조절</span>
+                    <span class="tuning-title">시풍 맞춤 Google TTS 30 보이스 자동 조절</span>
                   </div>
-                  <label class="toggle-switch-wrap" title="시의 정서(그리움, 사색, 자연, 위로, 설렘)에 맞게 음높이와 낭송 템포를 지능적으로 자동 튜닝합니다">
+                  <label class="toggle-switch-wrap" title="선택한 시인의 시풍과 정서에 맞게 30개 Google TTS 보이스 및 음높이/속도/호흡을 자동 매칭합니다">
                     <input type="checkbox" id="autoMoodTtsCheck" checked>
-                    <span class="switch-label">자동 감성 조절 켜짐</span>
+                    <span class="switch-label">시풍 자동 조절 켜짐</span>
                   </label>
                 </div>
 
                 <!-- 실시간 반영되는 TTS 파라미터 뱃지들 -->
                 <div class="tts-params-display">
                   <div class="param-badge">
+                    <span class="param-name">Google 보이스</span>
+                    <strong id="paramVoiceName" class="param-val">Iapetus (Clear)</strong>
+                  </div>
+                  <div class="param-badge">
                     <span class="param-name">감성 톤</span>
-                    <strong id="paramMoodStyle" class="param-val">아련한 그리움의 여운</strong>
+                    <strong id="paramMoodStyle" class="param-val">티 없이 맑고 청명한 성찰의 낭독</strong>
                   </div>
                   <div class="param-badge">
                     <span class="param-name">음높이 (Pitch)</span>
-                    <strong id="paramPitchVal" class="param-val">0.92x (-6%)</strong>
+                    <strong id="paramPitchVal" class="param-val">1.02x (+2%)</strong>
                   </div>
                   <div class="param-badge">
                     <span class="param-name">낭송 속도 (Rate)</span>
-                    <strong id="paramRateVal" class="param-val">0.78x (느긋한 호흡)</strong>
+                    <strong id="paramRateVal" class="param-val">0.78x (차분한 침묵)</strong>
                   </div>
                   <div class="param-badge">
                     <span class="param-name">행간 여운 (Pause)</span>
-                    <strong id="paramPauseVal" class="param-val">1.4초 (깊은 여운)</strong>
+                    <strong id="paramPauseVal" class="param-val">1.25초 (투명한 여운)</strong>
                   </div>
                 </div>
               </div>
 
               <div class="voice-actions-row">
-                <button id="previewVoiceBtn" class="voice-sub-btn" type="button" title="선택한 성우와 감성 톤의 목소리를 미리 들어봅니다">
-                  <span>🎧 목소리 미리듣기</span>
+                <button id="previewVoiceBtn" class="voice-sub-btn" type="button" title="선택한 Google TTS 음성과 감성 톤의 목소리를 미리 들어봅니다">
+                  <span>🎧 음성 미리듣기</span>
                 </button>
-                <button id="readPoemBtn" class="voice-main-btn" type="button" title="선택한 성우와 분위기 맞춤 톤으로 시를 낭송합니다">
+                <button id="readPoemBtn" class="voice-main-btn" type="button" title="선택한 음성과 시풍 맞춤 톤으로 시를 낭송합니다">
                   <span id="readPoemIcon">🎙️</span>
                   <span id="readPoemText">시 낭송 듣기</span>
                 </button>
