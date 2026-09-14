@@ -1,5 +1,5 @@
 /* =========================================================
-   시원 (詩苑) - 서정시 창작소 스타일 시트 (style.css)
+   시원 (詩苑) - 서정시 창작소 스타일 시트 (public/style.css)
    한국 전통의 고요한 미학과 현대적 고가독성 UI의 융합
    ========================================================= */
 
@@ -157,7 +157,7 @@ body {
   gap: 8px;
   padding: 8px 15px;
   background: #ffffff;
-  border: 1px solid #d4cca9;
+  border: 1.5px solid #d4cca9;
   border-radius: 20px;
   color: var(--text-primary);
   font-size: 0.88rem;
@@ -180,8 +180,8 @@ body {
 }
 
 .status-badge {
-  font-size: 0.72rem;
-  padding: 2px 8px;
+  font-size: 0.74rem;
+  padding: 3px 9px;
   background: #e9e3d0;
   color: #63532c;
   border-radius: 10px;
@@ -191,6 +191,11 @@ body {
 .status-badge.live {
   background: #dcfce7;
   color: #15803d;
+}
+
+.status-badge.warn {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 /* ---------------------------------------------------------
@@ -219,7 +224,7 @@ body {
 }
 
 /* ---------------------------------------------------------
-   3. 좌측 입력 카드 (가독성 재구성)
+   3. 좌측 입력 카드
    --------------------------------------------------------- */
 .card {
   background: var(--bg-card);
@@ -640,15 +645,15 @@ body {
 
 .poem-body {
   font-family: var(--font-serif);
-  font-size: 1.25rem;          /* 20px 상당의 여유롭고 읽기 편한 크기 */
-  line-height: 2.3;            /* 여유로운 시적 행간 */
-  color: var(--text-primary);  /* 먹물색 대비 */
+  font-size: 1.25rem;
+  line-height: 2.3;
+  color: var(--text-primary);
   white-space: pre-wrap;
   letter-spacing: -0.01em;
   font-weight: 400;
 }
 
-/* 시어 하이라이트 (눈에 부드럽고 명확한 시각적 힌트) */
+/* 시어 하이라이트 */
 .poem-body .highlight-word {
   color: var(--accent-indigo);
   background: rgba(30, 58, 138, 0.08);
@@ -762,7 +767,7 @@ body {
 }
 
 /* ---------------------------------------------------------
-   5. 모달 다이얼로그 (Gemini API 키)
+   5. 보안 모달 스타일링
    --------------------------------------------------------- */
 .modal-overlay {
   position: fixed;
@@ -770,7 +775,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(17, 24, 39, 0.6);
+  background: rgba(17, 24, 39, 0.65);
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
@@ -782,7 +787,7 @@ body {
 .modal-box {
   background: #ffffff;
   border-radius: var(--radius-lg);
-  max-width: 520px;
+  max-width: 540px;
   width: 100%;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
@@ -799,7 +804,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 20px 26px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .modal-header h3 {
@@ -821,97 +826,90 @@ body {
   padding: 26px;
 }
 
-.modal-desc {
-  font-size: 0.92rem;
+.security-status-box {
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.security-status-box.warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.status-indicator-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 1.02rem;
+  color: #15803d;
+}
+
+.security-status-box.warn .status-indicator-wrap {
+  color: #b45309;
+}
+
+.status-detail-text {
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  margin-bottom: 18px;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 
-.modal-input-field {
-  position: relative;
-  margin-bottom: 14px;
-}
-
-.modal-input-field input {
-  width: 100%;
-  padding: 12px 42px 12px 14px;
-  border: 1.5px solid #cbd5e1;
-  border-radius: var(--radius-sm);
-  font-size: 0.95rem;
-  outline: none;
-}
-
-.modal-input-field input:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
-}
-
-.btn-toggle-eye {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.modal-links {
-  margin-bottom: 18px;
-}
-
-.modal-links a {
-  color: #4f46e5;
+.status-detail-text code {
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
   font-size: 0.88rem;
-  text-decoration: none;
-  font-weight: 600;
 }
 
-.modal-links a:hover {
-  text-decoration: underline;
-}
-
-.security-notice {
+.security-checklist {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  padding: 12px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  color: #64748b;
-  line-height: 1.55;
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+}
+
+.security-checklist h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  margin-bottom: 12px;
+}
+
+.security-checklist ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.security-checklist li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
   padding: 16px 26px;
   background: #f8fafc;
-  border-top: 1px solid #f1f5f9;
-}
-
-.btn-secondary {
-  padding: 10px 18px;
-  background: #f1ebd9;
-  color: #574621;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.88rem;
+  border-top: 1px solid #e2e8f0;
 }
 
 .btn-primary {
-  padding: 10px 20px;
+  padding: 10px 22px;
   background: #1e293b;
   color: #ffffff;
   border: none;
   border-radius: var(--radius-sm);
   font-weight: 600;
   cursor: pointer;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
 }
 
 .btn-primary:hover {

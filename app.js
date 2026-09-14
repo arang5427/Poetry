@@ -1,15 +1,20 @@
 /**
- * 시원(詩苑) - 한국 서정시 창작소 애플리케이션 로직 (app.js)
- * Google Gemini 최신 API 연동 및 오프라인 데모 시 창작 엔진 탑재
+ * 시원(詩苑) - 한국 서정시 창작소 통합 애플리케이션 로직 (app.js)
+ * 
+ * [동작 모드 안내]
+ * 1. 백엔드 서버 구동 시: Node.js 서버의 .env 키를 사용하여 Server-to-Server 비공개 통신 (키 노출 0%)
+ * 2. GitHub Pages 정적 배포 시: 방문자 개인 API Key(LocalStorage) 연동 또는 체험용 데모 모드로 자동 작동
  */
 
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const STORAGE_KEY = 'gemini_poet_api_key';
+const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
-  apiKey: localStorage.getItem(STORAGE_KEY) || '',
+  isBackendOnline: false,
+  hasServerKey: false,
+  clientKey: localStorage.getItem(CLIENT_STORAGE_KEY) || '',
   selectedModel: 'gemini-3.8-flash',
   selectedMood: 'nostalgic',
   currentPoem: null,
@@ -28,7 +33,7 @@ const POETIC_WORD_SETS = [
   ['서리꽃', '새벽', '외투', '온기', '먼산']
 ];
 
-// 분위기별 프롬프트 가이드
+// 분위기별 가이드
 const MOOD_PROMPTS = {
   nostalgic: '김소월 시인 특유의 민조적 율격과 한(恨), 아련한 그리움과 애틋함의 정서',
   contemplative: '윤동주 시인 특유의 순결한 자아 성찰, 부끄러움 없는 삶을 향한 고요한 밤과 별빛의 시선',
@@ -53,7 +58,7 @@ const poemMoodSelect = document.getElementById('poemMoodSelect');
 const generatePoemBtn = document.getElementById('generatePoemBtn');
 const randomWordsBtn = document.getElementById('randomWordsBtn');
 
-// 시 전시 관련
+// 시 전시 영역
 const emptyState = document.getElementById('emptyState');
 const loadingState = document.getElementById('loadingState');
 const loadingWordsPreview = document.getElementById('loadingWordsPreview');
@@ -71,35 +76,82 @@ const readPoemBtn = document.getElementById('readPoemBtn');
 const copyPoemBtn = document.getElementById('copyPoemBtn');
 const downloadImageBtn = document.getElementById('downloadImageBtn');
 
-// 모달 관련
+// 보안 모달 및 클라이언트 키 영역
 const apiModal = document.getElementById('apiModal');
 const openApiModalBtn = document.getElementById('openApiModalBtn');
 const closeApiModalBtn = document.getElementById('closeApiModalBtn');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+const closeModalOkBtn = document.getElementById('closeModalOkBtn');
 const clearApiKeyBtn = document.getElementById('clearApiKeyBtn');
-const toggleKeyVisibility = document.getElementById('toggleKeyVisibility');
 const apiStatusBadge = document.getElementById('apiStatusBadge');
+const backendSecurityInfo = document.getElementById('backendSecurityInfo');
+const backendStatusIcon = document.getElementById('backendStatusIcon');
+const backendStatusTitle = document.getElementById('backendStatusTitle');
+const backendStatusDetail = document.getElementById('backendStatusDetail');
+const clientKeySection = document.getElementById('clientKeySection');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const toggleKeyVisibility = document.getElementById('toggleKeyVisibility');
 const toast = document.getElementById('toast');
 
 // =========================================================
-// 3. 초기화
+// 3. 초기화 및 백엔드 보안 점검
 // =========================================================
-function init() {
-  updateApiStatusUI();
+async function init() {
   setupEventListeners();
   
-  // 오늘 날짜 설정
+  // 오늘 날짜 표기
   const today = new Date();
-  const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
-  poemDate.textContent = dateStr;
+  poemDate.textContent = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+
+  // 서버 백엔드 연결 확인
+  await checkBackendStatus();
 }
 
-function updateApiStatusUI() {
-  if (state.apiKey && state.apiKey.trim() !== '') {
+async function checkBackendStatus() {
+  try {
+    const res = await fetch('/api/status', { method: 'GET' });
+    if (res.ok) {
+      const data = await res.json();
+      state.isBackendOnline = true;
+      state.hasServerKey = data.hasServerKey;
+
+      if (data.hasServerKey) {
+        apiStatusBadge.textContent = '보안 서버 연동';
+        apiStatusBadge.className = 'status-badge live';
+        backendStatusIcon.textContent = '🛡️';
+        backendStatusTitle.textContent = '백엔드 보안 연동 완료 (.env 키 암호화 보관)';
+        backendStatusDetail.innerHTML = '서버의 <code>.env</code> 파일에 등록된 API 키를 사용하여 서버-투-서버로 시를 창작합니다. 브라우저에 API 키가 절대 노출되지 않습니다.';
+        clientKeySection.classList.add('hidden');
+        clearApiKeyBtn.classList.add('hidden');
+      } else {
+        apiStatusBadge.textContent = '.env 키 등록 필요';
+        apiStatusBadge.className = 'status-badge warn';
+        backendStatusIcon.textContent = '⚠️';
+        backendStatusTitle.textContent = '서버 .env 파일에 GEMINI_API_KEY 등록 필요';
+        backendStatusDetail.innerHTML = '서버의 <code>.env</code> 파일에 <code>GEMINI_API_KEY=발급받은키</code>를 입력하시면 즉시 실시간 AI 시 창작이 활성화됩니다.';
+        clientKeySection.classList.add('hidden');
+        clearApiKeyBtn.classList.add('hidden');
+      }
+      return;
+    }
+  } catch (e) {
+    // 백엔드 없이 정적 웹(GitHub Pages 등)으로 열렸을 때
+    state.isBackendOnline = false;
+    state.hasServerKey = false;
+  }
+
+  // GitHub Pages 정적 모드 안내 활성화
+  setupStaticPagesMode();
+}
+
+function setupStaticPagesMode() {
+  backendSecurityInfo.classList.add('hidden');
+  clientKeySection.classList.remove('hidden');
+  clearApiKeyBtn.classList.remove('hidden');
+
+  if (state.clientKey && state.clientKey.trim().length > 5) {
     apiStatusBadge.textContent = 'API 연동 활성';
     apiStatusBadge.className = 'status-badge live';
-    apiKeyInput.value = state.apiKey;
+    apiKeyInput.value = state.clientKey;
   } else {
     apiStatusBadge.textContent = '데모 모드';
     apiStatusBadge.className = 'status-badge';
@@ -108,7 +160,7 @@ function updateApiStatusUI() {
 }
 
 // 토스트 메시지
-function showToast(message, duration = 2500) {
+function showToast(message, duration = 2600) {
   toast.textContent = message;
   toast.classList.remove('hidden');
   setTimeout(() => {
@@ -122,7 +174,9 @@ function showToast(message, duration = 2500) {
 function setupEventListeners() {
   // 모달 제어
   openApiModalBtn.addEventListener('click', () => {
-    apiKeyInput.value = state.apiKey;
+    if (!state.isBackendOnline && apiKeyInput) {
+      apiKeyInput.value = state.clientKey;
+    }
     apiModal.classList.remove('hidden');
   });
 
@@ -130,31 +184,29 @@ function setupEventListeners() {
     apiModal.classList.add('hidden');
   });
 
-  apiModal.addEventListener('click', (e) => {
-    if (e.target === apiModal) apiModal.classList.add('hidden');
-  });
-
-  saveApiKeyBtn.addEventListener('click', () => {
-    const key = apiKeyInput.value.trim();
-    state.apiKey = key;
-    if (key) {
-      localStorage.setItem(STORAGE_KEY, key);
-      showToast('Gemini API 키가 저장되었습니다.');
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-      showToast('API 키가 비어있어 데모 모드로 동작합니다.');
+  closeModalOkBtn.addEventListener('click', () => {
+    if (!state.isBackendOnline && apiKeyInput) {
+      const inputVal = apiKeyInput.value.trim();
+      state.clientKey = inputVal;
+      if (inputVal) {
+        localStorage.setItem(CLIENT_STORAGE_KEY, inputVal);
+        showToast('Gemini API 키가 안전하게 저장되었습니다 🔑');
+      } else {
+        localStorage.removeItem(CLIENT_STORAGE_KEY);
+        showToast('API 키가 비어있어 데모 모드로 동작합니다.');
+      }
+      setupStaticPagesMode();
     }
-    updateApiStatusUI();
     apiModal.classList.add('hidden');
   });
 
   clearApiKeyBtn.addEventListener('click', () => {
-    state.apiKey = '';
-    localStorage.removeItem(STORAGE_KEY);
+    state.clientKey = '';
+    localStorage.removeItem(CLIENT_STORAGE_KEY);
     apiKeyInput.value = '';
-    updateApiStatusUI();
+    setupStaticPagesMode();
     apiModal.classList.add('hidden');
-    showToast('API 키를 삭제하여 데모 모드로 전환되었습니다.');
+    showToast('API 키가 삭제되어 데모 모드로 전환되었습니다.');
   });
 
   toggleKeyVisibility.addEventListener('click', () => {
@@ -167,16 +219,20 @@ function setupEventListeners() {
     }
   });
 
-  // 추천 단어 무작위 채우기
+  apiModal.addEventListener('click', (e) => {
+    if (e.target === apiModal) apiModal.classList.add('hidden');
+  });
+
+  // 🎲 추천 단어 무작위 채우기
   randomWordsBtn.addEventListener('click', () => {
     const randomSet = POETIC_WORD_SETS[Math.floor(Math.random() * POETIC_WORD_SETS.length)];
     wordInputs.forEach((input, index) => {
       input.value = randomSet[index];
     });
-    showToast('감성 단어 5개가 추천되었습니다 🎲');
+    showToast('감성 시어 5개가 추천되었습니다 🎲');
   });
 
-  // 모델 및 분위기 변경
+  // 모델 및 분위기 셀렉트
   geminiModelSelect.addEventListener('change', (e) => {
     state.selectedModel = e.target.value;
   });
@@ -185,31 +241,30 @@ function setupEventListeners() {
     state.selectedMood = e.target.value;
   });
 
-  // 시 짓기 버튼
+  // 서정시 짓기 버튼
   generatePoemBtn.addEventListener('click', handleGeneratePoem);
 
   // 시 낭송 듣기 (TTS)
   readPoemBtn.addEventListener('click', toggleSpeech);
 
-  // 텍스트 복사
+  // 텍스트 클립보드 복사
   copyPoemBtn.addEventListener('click', copyPoemToClipboard);
 
   // 시 카드 이미지 저장
   downloadImageBtn.addEventListener('click', downloadPoemCardImage);
 
-  // 빗소리 앰비언트 토글
+  // 빗소리 앰비언트 사운드
   ambientSoundBtn.addEventListener('click', toggleRainSound);
 }
 
 // =========================================================
-// 5. 시 생성 핸들러 (Gemini API & Demo fallback)
+// 5. 시 생성 핸들러 (보안 백엔드 or 클라이언트 Gemini API or 데모)
 // =========================================================
 async function handleGeneratePoem() {
   const words = wordInputs.map(input => input.value.trim()).filter(w => w.length > 0);
 
   if (words.length < 5) {
-    showToast('다섯 개의 단어를 모두 입력해 주세요!');
-    // 빈 필드로 포커스 이동
+    showToast('다섯 개의 단어를 모두 채워주세요!');
     for (let input of wordInputs) {
       if (!input.value.trim()) {
         input.focus();
@@ -219,32 +274,58 @@ async function handleGeneratePoem() {
     return;
   }
 
-  // 로딩 상태 진입
   state.isGenerating = true;
   generatePoemBtn.disabled = true;
   emptyState.classList.add('hidden');
   poemContentArea.classList.add('hidden');
   poemActions.classList.add('hidden');
   loadingState.classList.remove('hidden');
-  loadingWordsPreview.textContent = `[선택 단어: ${words.join(' · ')}]`;
+  loadingWordsPreview.textContent = `[선택 시어: ${words.join(' · ')}]`;
 
   try {
-    let result;
-    if (state.apiKey) {
-      result = await callGeminiApi(words, state.selectedModel, state.selectedMood);
-    } else {
-      // 데모 모드 (자연스러운 딜레이 후 생성)
-      await new Promise(r => setTimeout(r, 1200));
-      result = generateDemoPoem(words, state.selectedMood);
-    }
+    let result = null;
 
-    renderPoem(result, words);
+    // 1순위: 백엔드 서버가 온라인이고 서버 키가 있는 경우 (보안 백엔드 호출)
+    if (state.isBackendOnline && state.hasServerKey) {
+      const response = await fetch('/api/generate-poem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          words,
+          model: state.selectedModel,
+          mood: state.selectedMood
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status} 오류`);
+      }
+
+      const data = await response.json();
+      result = data.poem;
+      renderPoem(result, words, true);
+      showToast('🔒 보안 백엔드를 통해 안전하게 시가 창작되었습니다.');
+    }
+    // 2순위: GitHub Pages 환경 등에서 클라이언트 키가 등록된 경우
+    else if (!state.isBackendOnline && state.clientKey && state.clientKey.trim().length > 5) {
+      result = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey);
+      renderPoem(result, words, true);
+      showToast('Google Gemini AI를 통해 실시간 시가 창작되었습니다 ✨');
+    }
+    // 3순위: 키가 없는 경우 감성 데모 템플릿 엔진으로 창작
+    else {
+      await new Promise(r => setTimeout(r, 1100));
+      result = generateDemoPoem(words, state.selectedMood);
+      renderPoem(result, words, false);
+      showToast('전통 서정시 데모 모드로 생성되었습니다.');
+    }
   } catch (error) {
     console.error('시 생성 오류:', error);
-    showToast(`오류가 발생했습니다: ${error.message}`);
-    // 실패 시 데모 시로 안내
-    renderPoem(generateDemoPoem(words, state.selectedMood), words);
-    showToast('API 응답 대신 전통 서정시 데모 모드로 생성되었습니다.');
+    showToast(`오류 발생: ${error.message}`);
+    // 실패 시 사용자 경험을 위해 데모 시 렌더링
+    const fallbackPoem = generateDemoPoem(words, state.selectedMood);
+    renderPoem(fallbackPoem, words, false);
   } finally {
     state.isGenerating = false;
     generatePoemBtn.disabled = false;
@@ -253,9 +334,9 @@ async function handleGeneratePoem() {
 }
 
 // =========================================================
-// 6. Gemini REST API 호출 (v1beta)
+// 6. 클라이언트 직접 Gemini API 호출 (GitHub Pages 모드 지원)
 // =========================================================
-async function callGeminiApi(words, model, mood) {
+async function callClientGeminiApi(words, model, mood, apiKey) {
   const moodDesc = MOOD_PROMPTS[mood] || MOOD_PROMPTS.nostalgic;
 
   const systemInstruction = `당신은 대한민국 대표 서정시인(김소월, 윤동주, 박목월, 정호승, 나태주의 감성을 품은 명시인)입니다.
@@ -276,17 +357,11 @@ async function callGeminiApi(words, model, mood) {
   2. 3~5개의 연으로 구성하고, 연과 연 사이는 빈 줄로 구분하세요.
   3. 제공된 다섯 단어(${words.join(', ')})를 시 본문 속에 자연스럽고 유려하게 녹여내세요.
   4. 시 본문이 끝난 뒤에는 '---' 구분선을 넣고, 그 아래에 시인의 짤막한 시작노트(2~3문장의 감상과 창작 의도)를 덧붙여 주세요.
-  5. 군더더기 인사말(예: "시를 작성해 드립니다" 등)은 절대 포함하지 마세요.
+  5. 군더더기 인사말은 절대 포함하지 마세요.
 `;
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${state.apiKey}`;
-
   const payload = {
-    contents: [
-      {
-        parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }]
-      }
-    ],
+    contents: [{ parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }] }],
     generationConfig: {
       temperature: 0.85,
       topP: 0.95,
@@ -294,16 +369,17 @@ async function callGeminiApi(words, model, mood) {
     }
   };
 
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
   let response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
 
-  // gemini-3.8-flash 엔드포인트가 환경에 따라 미지원(404)일 경우 최신 gemini-2.0-flash로 원활히 폴백
+  // gemini-3.8-flash 404 폴백
   if (!response.ok && response.status === 404 && model === 'gemini-3.8-flash') {
-    console.warn('gemini-3.8-flash 엔드포인트를 찾을 수 없어 최신 gemini-2.0-flash로 대체 호출합니다.');
-    const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.apiKey}`;
+    const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     response = await fetch(fallbackEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -324,19 +400,16 @@ async function callGeminiApi(words, model, mood) {
     throw new Error('Gemini API로부터 시 내용을 받아오지 못했습니다.');
   }
 
-  return parsePoemResponse(rawText);
+  return parsePoem(rawText);
 }
 
-// 텍스트 파싱
-function parsePoemResponse(rawText) {
+function parsePoem(rawText) {
   let title = '마음의 풍경';
-  let body = '';
-  let notes = '';
+  let bodyLines = [];
+  let noteLines = [];
+  let isNoteSection = false;
 
   const lines = rawText.trim().split('\n');
-  let contentLines = [];
-  let isNoteSection = false;
-  let noteLines = [];
 
   for (let line of lines) {
     const trimmed = line.trim();
@@ -347,22 +420,19 @@ function parsePoemResponse(rawText) {
     } else if (isNoteSection) {
       noteLines.push(line);
     } else {
-      contentLines.push(line);
+      bodyLines.push(line);
     }
   }
 
-  body = contentLines.join('\n').trim();
-  notes = noteLines.join('\n').trim();
-
-  if (!notes) {
-    notes = '다섯 알의 낱말이 모여 가슴 한 켠에 작은 등불을 켭니다.';
-  }
-
-  return { title, body, notes };
+  return {
+    title,
+    body: bodyLines.join('\n').trim(),
+    notes: noteLines.join('\n').trim() || '다섯 알의 낱말이 모여 가슴 한 켠에 작은 등불을 켭니다.'
+  };
 }
 
 // =========================================================
-// 7. 데모 모드용 고품질 서정시 템플릿 엔진
+// 7. 데모 모드 템플릿 엔진
 // =========================================================
 function generateDemoPoem(words, mood) {
   const [w1, w2, w3, w4, w5] = words;
@@ -395,24 +465,25 @@ function generateDemoPoem(words, mood) {
     }
   };
 
-  const selected = demoTemplates[mood] || demoTemplates.nostalgic;
-  return selected;
+  return demoTemplates[mood] || demoTemplates.nostalgic;
 }
 
 // =========================================================
 // 8. 시 렌더링 및 하이라이팅
 // =========================================================
-function renderPoem(poemData, words) {
+function renderPoem(poemData, words, isLiveAI = false) {
   state.currentPoem = poemData;
 
   poemTitle.textContent = poemData.title;
-  poemNotes.innerHTML = `<strong>시인의 노트</strong>: ${poemData.notes}`;
+  poemNotes.innerHTML = poemData.notes;
 
-  // 모델 태그 업데이트
-  const modelText = geminiModelSelect.options[geminiModelSelect.selectedIndex].text.split(' (')[0];
-  poemAuthorTag.textContent = state.apiKey ? `${modelText} 작시` : `시원(詩苑) 데모 작시`;
+  if (isLiveAI) {
+    const modelText = geminiModelSelect.options[geminiModelSelect.selectedIndex].text.split(' (')[0];
+    poemAuthorTag.textContent = `${modelText} 작시`;
+  } else {
+    poemAuthorTag.textContent = `시원(詩苑) 시인`;
+  }
 
-  // 시 본문 단어 하이라이트 적용
   let formattedBody = escapeHtml(poemData.body);
   words.forEach(w => {
     if (w) {
@@ -422,8 +493,6 @@ function renderPoem(poemData, words) {
   });
 
   poemBody.innerHTML = formattedBody;
-
-  // 화면 보이기
   poemContentArea.classList.remove('hidden');
   poemActions.classList.remove('hidden');
 }
@@ -442,7 +511,6 @@ function escapeRegex(string) {
 // 9. 부가 기능 (낭송 TTS, 복사, 이미지 저장, 빗소리)
 // =========================================================
 
-// 시 낭송 (Web Speech API)
 function toggleSpeech() {
   if (!('speechSynthesis' in window)) {
     showToast('현재 브라우저가 음성 합성을 지원하지 않습니다.');
@@ -461,10 +529,9 @@ function toggleSpeech() {
   const fullText = `${state.currentPoem.title}.\n\n${state.currentPoem.body}`;
   const utterance = new SpeechSynthesisUtterance(fullText);
   utterance.lang = 'ko-KR';
-  utterance.rate = 0.82; // 차분하고 느긋한 낭송 속도
+  utterance.rate = 0.82;
   utterance.pitch = 0.95;
 
-  // 한국어 음성 우선 선택
   const voices = window.speechSynthesis.getVoices();
   const koVoice = voices.find(v => v.lang.includes('ko') || v.lang.includes('KO'));
   if (koVoice) utterance.voice = koVoice;
@@ -488,11 +555,10 @@ function toggleSpeech() {
   window.speechSynthesis.speak(utterance);
 }
 
-// 텍스트 클립보드 복사
 function copyPoemToClipboard() {
   if (!state.currentPoem) return;
 
-  const copyText = `[${state.currentPoem.title}]\n\n${state.currentPoem.body}\n\n- ${poemNotes.textContent}`;
+  const copyText = `[${state.currentPoem.title}]\n\n${state.currentPoem.body}\n\n- 시인의 노트: ${poemNotes.textContent}`;
   navigator.clipboard.writeText(copyText).then(() => {
     showToast('시 텍스트가 클립보드에 복사되었습니다 📋');
   }).catch(() => {
@@ -500,7 +566,6 @@ function copyPoemToClipboard() {
   });
 }
 
-// 시 카드 캔버스 이미지로 저장
 function downloadPoemCardImage() {
   if (!state.currentPoem) return;
 
@@ -518,35 +583,29 @@ function downloadPoemCardImage() {
   canvas.width = width;
   canvas.height = Math.max(700, totalHeight);
 
-  // 배경: 미색 한지 느낌
   ctx.fillStyle = '#fcfaf6';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 은은한 테두리
   ctx.strokeStyle = '#dcd3c3';
   ctx.lineWidth = 1.5;
   ctx.strokeRect(24, 24, canvas.width - 48, canvas.height - 48);
 
-  // 안쪽 미세 테두리
   ctx.strokeStyle = '#ede4d4';
   ctx.lineWidth = 1;
   ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
 
-  // 제목 렌더링
-  ctx.fillStyle = '#1e242b';
+  ctx.fillStyle = '#18181b';
   ctx.font = 'bold 34px "Gowun Batang", "Noto Serif KR", serif';
   ctx.textAlign = 'center';
   ctx.fillText(state.currentPoem.title, width / 2, padding + 45);
 
-  // 장식선
   ctx.strokeStyle = '#baa891';
   ctx.beginPath();
   ctx.moveTo(width / 2 - 50, padding + 70);
   ctx.lineTo(width / 2 + 50, padding + 70);
   ctx.stroke();
 
-  // 시 본문 렌더링
-  ctx.fillStyle = '#2d2a26';
+  ctx.fillStyle = '#27272a';
   ctx.font = '20px "Gowun Batang", "Noto Serif KR", serif';
   ctx.textAlign = 'center';
 
@@ -556,30 +615,27 @@ function downloadPoemCardImage() {
     currentY += lineHeight;
   }
 
-  // 낙관 도장
   const sealSize = 46;
   const sealX = width - padding - 60;
   const sealY = canvas.height - padding - 60;
 
-  ctx.strokeStyle = '#9e2a2b';
+  ctx.strokeStyle = '#991b1b';
   ctx.lineWidth = 2;
-  ctx.fillStyle = 'rgba(158, 42, 43, 0.05)';
+  ctx.fillStyle = 'rgba(153, 27, 27, 0.05)';
   ctx.fillRect(sealX, sealY, sealSize, sealSize);
   ctx.strokeRect(sealX, sealY, sealSize, sealSize);
 
-  ctx.fillStyle = '#9e2a2b';
+  ctx.fillStyle = '#991b1b';
   ctx.font = 'bold 13px "Gowun Batang", serif';
   ctx.textAlign = 'center';
   ctx.fillText('心月', sealX + sealSize / 2, sealY + 20);
   ctx.fillText('吟詠', sealX + sealSize / 2, sealY + 36);
 
-  // 푸터 안내
-  ctx.fillStyle = '#948a7b';
+  ctx.fillStyle = '#71717a';
   ctx.font = '14px "Pretendard", sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('시원(詩苑) · 서정시 창작소', padding + 20, canvas.height - padding - 20);
 
-  // 다운로드 트리거
   const link = document.createElement('a');
   link.download = `${state.currentPoem.title}_시원.png`;
   link.href = canvas.toDataURL('image/png');
@@ -589,7 +645,7 @@ function downloadPoemCardImage() {
 }
 
 // ---------------------------------------------------------
-// 10. Web Audio API 기반 오가닉 빗소리 신디사이저 (무외부파일)
+// 10. Web Audio API 빗소리 신디사이저
 // ---------------------------------------------------------
 let audioCtx = null;
 let rainGainNode = null;
@@ -612,7 +668,6 @@ function startRainSound() {
       audioCtx.resume();
     }
 
-    // 화이트 노이즈 버퍼 생성 (2초 루프)
     const bufferSize = audioCtx.sampleRate * 2;
     const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
@@ -620,22 +675,18 @@ function startRainSound() {
       output[i] = Math.random() * 2 - 1;
     }
 
-    // 루프 소스 노드
     rainNoiseNode = audioCtx.createBufferSource();
     rainNoiseNode.buffer = noiseBuffer;
     rainNoiseNode.loop = true;
 
-    // 핑크/레인 필터링 (로우패스 필터로 부드러운 빗소리 질감 구현)
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(850, audioCtx.currentTime);
 
-    // 볼륨 조절 게인
     rainGainNode = audioCtx.createGain();
     rainGainNode.gain.setValueAtTime(0.01, audioCtx.currentTime);
     rainGainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 1.5);
 
-    // 연결: 소스 -> 필터 -> 게인 -> 스피커
     rainNoiseNode.connect(filter);
     filter.connect(rainGainNode);
     rainGainNode.connect(audioCtx.destination);
@@ -647,7 +698,7 @@ function startRainSound() {
     showToast('창밖의 잔잔한 빗소리가 흐릅니다 🌧️');
   } catch (err) {
     console.error('오디오 에러:', err);
-    showToast('오디오 재생을 시작할 수 없습니다.');
+    showToast('오디오를 시작할 수 없습니다.');
   }
 }
 
@@ -670,5 +721,5 @@ function stopRainSound() {
   }
 }
 
-// DOM 준비 시 초기화 실행
+// DOM 준비 시 초기화
 document.addEventListener('DOMContentLoaded', init);
