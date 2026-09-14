@@ -458,13 +458,202 @@ body {
 }
 
 /* ---------------------------------------------------------
-   4. 우측 시 전시 카드 (가독성 특화 한지 족자 스타일)
+   4. 우측: 유튜브 배경음악(BGM) 플레이어 카드
    --------------------------------------------------------- */
-.poem-display-section {
-  position: sticky;
-  top: 84px;
+.bgm-player-card {
+  background: #fdfbf7;
+  border: 1.5px solid #ded5c2;
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+  background-image: 
+    linear-gradient(rgba(253, 251, 247, 0.9), rgba(253, 251, 247, 0.9)),
+    radial-gradient(#d6cec0 0.65px, transparent 0.65px);
+  background-size: auto, 18px 18px;
 }
 
+.bgm-player-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bgm-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bgm-icon {
+  font-size: 1.5rem;
+  animation: pulseRotate 6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes pulseRotate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.bgm-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bgm-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.03em;
+}
+
+.bgm-title {
+  font-family: var(--font-serif);
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgm-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bgm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #1e293b;
+  color: #ffffff;
+  border: 1.5px solid #1e293b;
+  border-radius: 20px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.bgm-btn:hover {
+  background: #0f172a;
+}
+
+.bgm-btn.secondary {
+  background: #ffffff;
+  color: var(--text-secondary);
+  border-color: #cfc5b0;
+}
+
+.bgm-btn.secondary:hover {
+  background: #f4f0e6;
+  color: var(--accent-ink);
+}
+
+.bgm-player-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed #e6ded0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.bgm-volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90px;
+  height: 5px;
+  background: #d4caa9;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.vol-text {
+  font-size: 0.78rem;
+  font-weight: 700;
+  min-width: 32px;
+  color: var(--text-secondary);
+}
+
+.bgm-auto-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.bgm-auto-wrap input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-gold);
+}
+
+.youtube-player-container {
+  margin-top: 14px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid #dcd3c3;
+  background: #000;
+}
+
+.video-aspect-wrap {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 비율 */
+  height: 0;
+}
+
+.video-aspect-wrap iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ---------------------------------------------------------
+   5. 우측 시 전시 카드 (가독성 특화 한지 족자 스타일)
+   --------------------------------------------------------- */
 .poem-scroll-card {
   background: var(--bg-scroll);
   border: 1.5px solid #ded5c2;
@@ -691,6 +880,156 @@ body {
   font-size: 0.98rem;
   color: var(--text-secondary);
   line-height: 1.8;
+}
+
+/* 시 낭송 성우 맞춤 설정 카드 */
+.voice-actor-card {
+  background: #fdfbf7;
+  border: 1.5px solid #ded5c2;
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.voice-actor-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-family: var(--font-serif);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+.voice-tip {
+  font-size: 0.74rem;
+  background: #ede9fe;
+  color: #5b21b6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.voice-selectors-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .voice-selectors-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.voice-selector-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.selector-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.segmented-control {
+  display: flex;
+  background: #ede6d6;
+  padding: 3px;
+  border-radius: 20px;
+  gap: 3px;
+}
+
+.seg-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 7px 8px;
+  border-radius: 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.seg-btn:hover {
+  color: var(--accent-ink);
+}
+
+.seg-btn.active {
+  background: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(30, 41, 59, 0.25);
+}
+
+.voice-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voice-sub-btn {
+  padding: 10px 16px;
+  background: #ffffff;
+  border: 1.5px solid #cfc5b0;
+  border-radius: 24px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.voice-sub-btn:hover {
+  background: #fbf9f4;
+  border-color: #9c8e6f;
+  color: var(--accent-ink);
+}
+
+.voice-main-btn {
+  flex: 1;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.2);
+}
+
+.voice-main-btn:hover {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  transform: translateY(-1px);
+}
+
+.voice-main-btn.speaking {
+  background: #991b1b;
+  animation: pulseSpeaking 1.5s infinite;
+}
+
+@keyframes pulseSpeaking {
+  0% { box-shadow: 0 0 0 0 rgba(153, 27, 27, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(153, 27, 27, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(153, 27, 27, 0); }
 }
 
 /* 전통 낙관 도장 */
