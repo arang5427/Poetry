@@ -31,6 +31,9 @@ const state = {
   isBgmPlaying: false,
   bgmVolume: 35,
   currentBgmVideoId: '',
+  currentBgmIndex: 0,
+  failedBgmVideoIds: new Set(),
+  autoRecoverCount: 0,
 
   // 성우 낭송 및 감성 튜닝 상태
   voiceGender: 'male',
@@ -786,39 +789,67 @@ const POET_DATABASE = {
   romantic: { name: '나태주', work: '풀꽃', desc: '소박하고 다정한 풀꽃의 위로', recommendedVoice: 'Sulafat', recommendedGender: 'female', recommendedAge: 40, bgmKey: 'romantic' }
 };
 
-// 분위기별 유튜브 BGM 트랙 매핑 (보컬 없는 고품질 서정 연주곡)
-const MOOD_BGM_TRACKS = {
-  contemplative: {
-    videoId: 'IV8LO-T66ys',
-    title: '별빛 밤의 고요한 사색 (서정 피아노)',
-    moodLabel: '순결한 자아 성찰과 깊은 사유'
-  },
-  nostalgic: {
-    videoId: 'r13T2c0bK2Q',
-    title: '한국 전통 서정 선율 (가야금 & 대금 인스트루멘탈)',
-    moodLabel: '아련한 그리움과 애틋한 한'
-  },
-  nature: {
-    videoId: 'd9O9u28P9wE',
-    title: '청산(靑山)의 바람과 자연 선율 (국악 힐링)',
-    moodLabel: '담백한 자연과 고향 길의 정취'
-  },
-  comfort: {
-    videoId: '1E0942rV2i4',
-    title: '따스한 위로의 선율 (피아노 & 첼로)',
-    moodLabel: '상처를 어루만지는 온기와 위로'
-  },
-  romantic: {
-    videoId: '5qap5aO4i9A',
-    title: '봄날의 설렘 (따스한 어쿠스틱 기타 선율)',
-    moodLabel: '풋풋한 첫사랑과 풀꽃의 다정함'
-  },
-  modern: {
-    videoId: 'IV8LO-T66ys',
-    title: '고요한 밤의 몽환적 선율 (모던 피아노 & 앰비언트)',
-    moodLabel: '현대적 일상과 감각적 사유'
-  }
+// 분위기별 유튜브 BGM 후보 플레이리스트 (보컬 없는 고품질 서정 연주곡 다중 후보군)
+const MOOD_BGM_PLAYLISTS = {
+  contemplative: [
+    { videoId: 'IV8LO-T66ys', title: '별빛 밤의 고요한 사색 (서정 피아노)', desc: '순결한 자아 성찰과 깊은 사유의 피아노 선율' },
+    { videoId: '1E0942rV2i4', title: '고요한 밤의 독백 (피아노 & 첼로)', desc: '차분하게 가라앉는 사색과 성찰의 울림' },
+    { videoId: 'vV_yUe4WqN0', title: '달빛과 침묵의 호수 (앰비언트 클래식)', desc: '투명하고 청명한 밤하늘의 서정' },
+    { videoId: 'n61ULEU7SU0', title: '새벽 별빛을 따라서 (서정 피아노 솔로)', desc: '맑고 단정한 내면의 고백' }
+  ],
+  nostalgic: [
+    { videoId: 'r13T2c0bK2Q', title: '한국 전통 서정 선율 (가야금 & 대금 인스트루멘탈)', desc: '아련한 그리움과 애틋한 한' },
+    { videoId: 'b4-nQ4P5yW4', title: '옛 기억의 언덕길 (가야금 서정곡)', desc: '가슴 한구석을 울리는 옛이야기 선율' },
+    { videoId: 'd9O9u28P9wE', title: '고향의 봄과 저녁노을 (해금 & 피아노)', desc: '아득하고 따스한 유년의 기억' },
+    { videoId: 'gL3xI3p9XjM', title: '바람이 머무는 숲 (국악 퓨전 힐링)', desc: '시린 마음을 어루만지는 전통 가락' }
+  ],
+  nature: [
+    { videoId: 'd9O9u28P9wE', title: '청산(靑山)의 바람과 자연 선율 (국악 힐링)', desc: '담백한 자연과 고향 길의 정취' },
+    { videoId: 'WPni755-Krg', title: '솔바람 부는 언덕 (어쿠스틱 & 피아노)', desc: '맑은 숲속의 산뜻하고 청량한 바람' },
+    { videoId: '5qap5aO4i9A', title: '들꽃 피는 오솔길 (어쿠스틱 기타)', desc: '흙냄새와 풀내음 가득한 시골길' },
+    { videoId: 'n61ULEU7SU0', title: '새벽 이슬 머금은 숲 (자연 앰비언트 & 피아노)', desc: '아침 햇살에 반짝이는 나뭇잎의 숨결' }
+  ],
+  comfort: [
+    { videoId: '1E0942rV2i4', title: '따스한 위로의 선율 (피아노 & 첼로)', desc: '상처를 어루만지는 온기와 위로' },
+    { videoId: '7NOSDKb0HlU', title: '지친 하루 끝에 건네는 온기 (포근한 피아노)', desc: '수고한 당신을 말없이 안아주는 멜로디' },
+    { videoId: 'IV8LO-T66ys', title: '다시 일어서는 용기 (희망의 서정 듀엣)', desc: '눈물 속에서 다시 피어나는 잔잔한 위안' },
+    { videoId: 'r13T2c0bK2Q', title: '마음의 쉼터 (따뜻한 연주곡)', desc: '모든 짐을 내려놓고 쉬어가는 평온함' }
+  ],
+  romantic: [
+    { videoId: '5qap5aO4i9A', title: '봄날의 설렘 (따스한 어쿠스틱 기타 선율)', desc: '풋풋한 첫사랑과 풀꽃의 다정함' },
+    { videoId: '7NOSDKb0HlU', title: '너를 향한 설레는 발걸음 (경쾌한 피아노)', desc: '햇살처럼 반짝이는 청춘의 사랑' },
+    { videoId: 'WPni755-Krg', title: '달콤한 봄바람의 고백 (어쿠스틱 듀엣)', desc: '부드럽고 감미로운 서정의 멜로디' },
+    { videoId: 'IV8LO-T66ys', title: '영원한 별빛의 약속 (로맨틱 클래식)', desc: '은은하게 울려 퍼지는 사랑의 잔상' }
+  ],
+  modern: [
+    { videoId: 'IV8LO-T66ys', title: '고요한 밤의 몽환적 선율 (모던 피아노 & 앰비언트)', desc: '현대적 일상과 감각적 사유' },
+    { videoId: '1E0942rV2i4', title: '도시의 서늘한 네온사인 (모던 미니멀리즘)', desc: '건조한 도시 속 감각적인 서정' },
+    { videoId: 'vV_yUe4WqN0', title: '심야의 사색 (로파이 앰비언트 & 신스)', desc: '몽환적이고 감각적인 현대인의 내면' },
+    { videoId: '5qap5aO4i9A', title: '어스름한 새벽 골목길 (모던 어쿠스틱)', desc: '새벽의 고요와 도시의 여운' }
+  ]
 };
+
+// 하위 호환용 기본 트랙 맵 (각 분위기의 첫 번째 후보곡)
+const MOOD_BGM_TRACKS = {
+  contemplative: MOOD_BGM_PLAYLISTS.contemplative[0],
+  nostalgic: MOOD_BGM_PLAYLISTS.nostalgic[0],
+  nature: MOOD_BGM_PLAYLISTS.nature[0],
+  comfort: MOOD_BGM_PLAYLISTS.comfort[0],
+  romantic: MOOD_BGM_PLAYLISTS.romantic[0],
+  modern: MOOD_BGM_PLAYLISTS.modern[0]
+};
+
+function getMoodPlaylist(mood) {
+  const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
+  const bgmKey = poetInfo.bgmKey || 'contemplative';
+  return MOOD_BGM_PLAYLISTS[bgmKey] || MOOD_BGM_PLAYLISTS.contemplative;
+}
+
+function getCurrentMoodTrack(mood, index = state.currentBgmIndex) {
+  const playlist = getMoodPlaylist(mood);
+  const safeIdx = ((index % playlist.length) + playlist.length) % playlist.length;
+  return { track: playlist[safeIdx], index: safeIdx, total: playlist.length };
+}
 
 // 감성 단어 추천 세트
 const POETIC_WORD_SETS = [
@@ -865,11 +896,18 @@ const bgmTrackTitle = document.getElementById('bgmTrackTitle');
 const bgmPlayToggleBtn = document.getElementById('bgmPlayToggleBtn');
 const bgmPlayIcon = document.getElementById('bgmPlayIcon');
 const bgmPlayText = document.getElementById('bgmPlayText');
+const bgmRefreshBtn = document.getElementById('bgmRefreshBtn');
+const bgmSearchYoutubeBtn = document.getElementById('bgmSearchYoutubeBtn');
 const bgmVideoToggleBtn = document.getElementById('bgmVideoToggleBtn');
 const bgmVolumeSlider = document.getElementById('bgmVolumeSlider');
 const bgmVolumeText = document.getElementById('bgmVolumeText');
 const bgmAutoPlayCheck = document.getElementById('bgmAutoPlayCheck');
+const bgmStatusAlert = document.getElementById('bgmStatusAlert');
+const bgmStatusAlertText = document.getElementById('bgmStatusAlertText');
+const closeBgmAlertBtn = document.getElementById('closeBgmAlertBtn');
 const youtubePlayerContainer = document.getElementById('youtubePlayerContainer');
+const customBgmInput = document.getElementById('customBgmInput');
+const applyCustomBgmBtn = document.getElementById('applyCustomBgmBtn');
 
 // 성우 낭송 & Google TTS 30 음성 제어 요소
 const voiceGenderGroup = document.getElementById('voiceGenderGroup');
@@ -914,8 +952,8 @@ window.onYouTubeIframeAPIReady = function() {
 
 function initYouTubePlayer() {
   const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
-  const bgmKey = poetInfo.bgmKey || 'contemplative';
-  const defaultTrack = MOOD_BGM_TRACKS[bgmKey] || MOOD_BGM_TRACKS.contemplative;
+  const current = getCurrentMoodTrack(state.selectedMood, state.currentBgmIndex);
+  const defaultTrack = current.track;
   state.currentBgmVideoId = defaultTrack.videoId;
   updateBgmTitleUI(`[${poetInfo.name} 풍] ${defaultTrack.title}`);
 
@@ -961,8 +999,144 @@ function onPlayerStateChange(event) {
   }
 }
 
+// 🔀 유튜브 재생 실패 시 자동 복구 엔진 (Error 2, 5, 100, 101, 150 등 대응)
 function onPlayerError(err) {
-  console.warn('YouTube 재생 오류:', err);
+  const errorCode = (err && typeof err === 'object' && err.data !== undefined)
+    ? err.data
+    : (typeof err === 'number' ? err : 'Unknown');
+
+  console.warn(`[시원 BGM] YouTube 재생 제한/오류 감지 (코드: ${errorCode}, 영상 ID: ${state.currentBgmVideoId})`);
+
+  if (state.currentBgmVideoId) {
+    state.failedBgmVideoIds.add(state.currentBgmVideoId);
+  }
+
+  autoRecoverBgm(errorCode);
+}
+
+function autoRecoverBgm(errorCode) {
+  state.autoRecoverCount++;
+  const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
+  const playlist = getMoodPlaylist(state.selectedMood);
+
+  // 아직 실패하지 않은 다음 후보 곡 탐색
+  let candidateIdx = -1;
+  for (let i = 0; i < playlist.length; i++) {
+    const nextIdx = (state.currentBgmIndex + 1 + i) % playlist.length;
+    const track = playlist[nextIdx];
+    if (!state.failedBgmVideoIds.has(track.videoId)) {
+      candidateIdx = nextIdx;
+      break;
+    }
+  }
+
+  if (candidateIdx !== -1) {
+    state.currentBgmIndex = candidateIdx;
+    const nextTrack = playlist[candidateIdx];
+    state.currentBgmVideoId = nextTrack.videoId;
+
+    updateBgmTitleUI(`[${poetInfo.name} 풍] 🔀 자동 대체곡 #${candidateIdx + 1}: ${nextTrack.title}`);
+    showBgmAlert(`⚠️ 기존 영상 재생 불가(오류코드: ${errorCode}) → 시풍에 어울리는 새로운 연주곡으로 자동 교체했습니다.`);
+    showToast(`시의 분위기에 어울리는 새로운 BGM으로 자동 전환하여 재생합니다 🎵`);
+
+    if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function') {
+      state.ytPlayer.loadVideoById({
+        videoId: nextTrack.videoId,
+        startSeconds: 0
+      });
+      state.ytPlayer.setVolume(state.bgmVolume);
+    }
+  } else {
+    // 모든 후보 영상이 임베드 제한된 경우 안내
+    showBgmAlert(`⚠️ 유튜브 영상 정책으로 재생이 제한되었습니다. 상단 [🔍 유튜브 검색]으로 직접 감상하시거나 [📺 영상]에서 직접 URL을 입력하세요.`);
+    showToast(`배경음악 재생이 제한되었습니다. [🔍 유튜브 검색]을 이용해 보세요.`);
+  }
+}
+
+// 🔀 수동 BGM 교체 및 새로고침
+function rotateBgm(isManual = true) {
+  const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
+  const playlist = getMoodPlaylist(state.selectedMood);
+  state.currentBgmIndex = (state.currentBgmIndex + 1) % playlist.length;
+  const nextTrack = playlist[state.currentBgmIndex];
+  state.currentBgmVideoId = nextTrack.videoId;
+
+  updateBgmTitleUI(`[${poetInfo.name} 풍] #${state.currentBgmIndex + 1}: ${nextTrack.title}`);
+
+  if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function') {
+    state.ytPlayer.loadVideoById({
+      videoId: nextTrack.videoId,
+      startSeconds: 0
+    });
+    state.ytPlayer.setVolume(state.bgmVolume);
+  }
+
+  if (isManual) {
+    hideBgmAlert();
+    showToast(`[${nextTrack.title}] 다른 연주곡으로 교체 재생합니다 🔀`);
+  }
+}
+
+// 🔍 유튜브에서 현재 시풍 연주곡 직접 검색하기
+function searchYoutubeForMood() {
+  const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
+  const query = `${poetInfo.name} 분위기 잔잔한 서정 연주곡 BGM 가사없는음악`;
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  window.open(searchUrl, '_blank');
+  showToast(`유튜브에서 [${poetInfo.name}] 시풍에 맞는 연주곡 검색창을 열었습니다 🔍`);
+}
+
+// 직접 입력한 유튜브 링크 또는 영상 ID 파싱
+function extractYouTubeVideoId(input) {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = trimmed.match(regExp);
+  return match ? match[1] : null;
+}
+
+// 사용자 맞춤 유튜브 영상 적용 및 즉시 재생
+function handleApplyCustomBgm() {
+  const inputVal = customBgmInput ? customBgmInput.value.trim() : '';
+  if (!inputVal) {
+    showToast('유튜브 영상 주소(URL) 또는 11자리 영상 ID를 입력해 주세요.');
+    return;
+  }
+
+  const videoId = extractYouTubeVideoId(inputVal);
+  if (!videoId) {
+    showToast('올바른 유튜브 주소 형식이 아닙니다. 확인 후 다시 시도해 주세요.');
+    return;
+  }
+
+  state.currentBgmVideoId = videoId;
+  updateBgmTitleUI(`[직접 지정 BGM] 사용자 맞춤 연주 영상 (${videoId})`);
+  hideBgmAlert();
+
+  if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function') {
+    state.ytPlayer.loadVideoById({
+      videoId: videoId,
+      startSeconds: 0
+    });
+    state.ytPlayer.setVolume(state.bgmVolume);
+  }
+
+  showToast('사용자가 지정한 유튜브 음악을 재생합니다 🎶');
+  if (customBgmInput) customBgmInput.value = '';
+}
+
+function showBgmAlert(message) {
+  if (!bgmStatusAlert || !bgmStatusAlertText) return;
+  bgmStatusAlertText.textContent = message;
+  bgmStatusAlert.classList.remove('hidden');
+}
+
+function hideBgmAlert() {
+  if (!bgmStatusAlert) return;
+  bgmStatusAlert.classList.add('hidden');
 }
 
 function updateBgmTitleUI(title) {
@@ -988,9 +1162,11 @@ function toggleBgm() {
 
 function switchBgmForMood(mood, autoPlay = false) {
   const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
-  const bgmKey = poetInfo.bgmKey || 'contemplative';
-  const track = MOOD_BGM_TRACKS[bgmKey] || MOOD_BGM_TRACKS.contemplative;
+  state.currentBgmIndex = 0; // 시풍 변경 시 첫 번째 트랙으로 초기화
+  const current = getCurrentMoodTrack(mood, state.currentBgmIndex);
+  const track = current.track;
   updateBgmTitleUI(`[${poetInfo.name} 풍] ${track.title}`);
+  hideBgmAlert();
 
   if (!state.ytPlayer || typeof state.ytPlayer.loadVideoById !== 'function') {
     state.currentBgmVideoId = track.videoId;
@@ -1428,6 +1604,24 @@ function setupEventListeners() {
   bgmPlayToggleBtn.addEventListener('click', toggleBgm);
   bgmVideoToggleBtn.addEventListener('click', toggleVideoContainer);
   bgmVolumeSlider.addEventListener('input', handleVolumeChange);
+
+  if (bgmRefreshBtn) {
+    bgmRefreshBtn.addEventListener('click', () => rotateBgm(true));
+  }
+  if (bgmSearchYoutubeBtn) {
+    bgmSearchYoutubeBtn.addEventListener('click', searchYoutubeForMood);
+  }
+  if (applyCustomBgmBtn) {
+    applyCustomBgmBtn.addEventListener('click', handleApplyCustomBgm);
+  }
+  if (customBgmInput) {
+    customBgmInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleApplyCustomBgm();
+    });
+  }
+  if (closeBgmAlertBtn) {
+    closeBgmAlertBtn.addEventListener('click', hideBgmAlert);
+  }
 
   // 성우 낭송 설정 (성별 선택)
   voiceGenderGroup.addEventListener('click', (e) => {
