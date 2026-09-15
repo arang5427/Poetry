@@ -25,7 +25,7 @@
       <div class="brand">
         <div class="brand-seal">詩</div>
         <div class="brand-text">
-          <h1 class="brand-title">시원 <span>(詩苑)</span></h1>
+          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-1</span></h1>
           <p class="brand-subtitle">AI 한국 서정시 창작소 · 백엔드 보안 운영</p>
         </div>
       </div>
@@ -98,16 +98,16 @@
             <div class="option-group">
               <label for="geminiModelSelect" class="option-label">
                 <span class="label-with-icon">🤖 Gemini 모델 버전</span>
-                <span class="version-tip">최신 버전 탑재</span>
+                <span class="version-tip">트래픽 과부하 방어 탑재</span>
               </label>
               <div class="select-wrapper">
                 <select id="geminiModelSelect" class="custom-select">
-                  <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (최신 차세대 고지능 엔진)</option>
+                  <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (최신 고지능 · 스마트 폴백)</option>
                   <option value="gemini-3.7-flash">Gemini 3.7 Flash (하이브리드 추론 및 감성 엔진)</option>
-                  <option value="gemini-3.6-flash">Gemini 3.6 Flash (정교하고 빠른 고지능 모델)</option>
+                  <option value="gemini-3.6-flash">Gemini 3.6 Flash (정교하고 안정적인 고속 추천)</option>
                   <option value="gemini-3.5-flash">Gemini 3.5 Flash (안정적 고속 서정 엔진)</option>
+                  <option value="gemini-flash-latest">Gemini Flash Latest (최신 자동 안정화 버전)</option>
                   <option value="gemini-2.5-pro">Gemini 2.5 Pro (깊은 문학적 통찰과 심층 사유)</option>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (경량 및 빠른 응답)</option>
                 </select>
               </div>
             </div>
@@ -487,8 +487,9 @@
         </div>
 
         <div class="security-checklist">
-          <h4>🛡️ 정보보안 지침 준수</h4>
+          <h4>🛡️ 정보보안 지침 준수 & 시스템 정보</h4>
           <ul>
+            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-1</span> (TTS 별표 스킵 · 트래픽 과부하 방어)</li>
             <li>✅ <strong>Server-to-Server 통신</strong>: 백엔드 환경에서는 구글 API를 비공개 호출</li>
             <li>✅ <strong>환경변수 격리 (.env)</strong>: 소스 코드에 키를 하드코딩하지 않고 환경변수로 분리</li>
             <li>✅ <strong>Git 유출 차단 (.gitignore)</strong>: 깃허브 커밋 시 .env 파일 원천 배제</li>
