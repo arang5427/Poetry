@@ -2046,6 +2046,320 @@ body {
   display: none !important;
 }
 
+/* ---------------------------------------------------------
+   7. [Ver-9] 문학 파이프라인 스텝, 3인 심사위원 합평 및 글다듬기
+   --------------------------------------------------------- */
+.pipeline-steps-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 16px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #e7ded0;
+  font-size: 0.8rem;
+}
+
+.step-pill {
+  color: var(--text-muted);
+  padding: 3px 8px;
+  border-radius: 12px;
+  transition: all 0.25s ease;
+}
+
+.step-pill.active {
+  background: var(--accent-ink);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(44, 53, 64, 0.2);
+}
+
+.step-arrow {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.poem-version-toggle-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fdfbf7;
+  border: 1px solid #e7ded0;
+  border-radius: 12px;
+  padding: 6px 12px;
+  margin-bottom: 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.version-toggle-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.toggle-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-tab-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-primary);
+}
+
+.toggle-tab-btn.active {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.pill-badge-refined {
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  font-weight: 700;
+}
+
+.view-notice-badge {
+  font-size: 0.76rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.judges-review-section {
+  margin: 32px 0 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #faf8f5 100%);
+  border: 1.5px solid #ded5c2;
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.judges-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e7ded0;
+  margin-bottom: 16px;
+}
+
+.judges-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.judges-icon {
+  font-size: 1.8rem;
+}
+
+.judges-title {
+  font-family: var(--font-serif);
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: var(--accent-ink);
+  margin-bottom: 3px;
+}
+
+.judges-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.judges-score-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 6px 14px;
+  text-align: center;
+  min-width: 80px;
+}
+
+.score-label {
+  font-size: 0.7rem;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.score-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #b45309;
+}
+
+.critique-summary-box {
+  background: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+}
+
+.critique-summary-text {
+  font-size: 0.86rem;
+  color: #334155;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.judges-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.judge-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.judge-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+}
+
+.judge-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.judge-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.judge-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.judge-role-badge {
+  font-size: 0.7rem;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-top: 3px;
+  display: inline-block;
+  font-weight: 600;
+}
+
+.judge-score-pill {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #047857;
+  background: #d1fae5;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.judge-critique-text {
+  font-size: 0.82rem;
+  color: #3f3f46;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  flex: 1;
+}
+
+.judge-advice-box {
+  background: #fefce8;
+  border: 1px dashed #fef08a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  color: #854d0e;
+  line-height: 1.4;
+}
+
+.improvements-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.improvements-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #166534;
+  margin-bottom: 8px;
+}
+
+.improvements-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.improvement-item {
+  font-size: 0.82rem;
+  color: #15803d;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.refine-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  color: #ffffff !important;
+  border-color: #4338ca !important;
+  font-weight: 700 !important;
+}
+
+.refine-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%) !important;
+}
+
+@media (max-width: 900px) {
+  .judges-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .poem-version-toggle-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
 .footer {
   text-align: center;
   margin-top: 50px;

@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-8';
+const APP_VERSION = 'Ver-9';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -957,14 +957,32 @@ const switchToDirectTabBtn = document.getElementById('switchToDirectTabBtn');
 // 시 전시 영역
 const emptyState = document.getElementById('emptyState');
 const loadingState = document.getElementById('loadingState');
+const loadingMessage = document.getElementById('loadingMessage');
+const pipelineStep1 = document.getElementById('pipelineStep1');
+const pipelineStep2 = document.getElementById('pipelineStep2');
+const pipelineStep3 = document.getElementById('pipelineStep3');
 const loadingWordsPreview = document.getElementById('loadingWordsPreview');
+
 const poemContentArea = document.getElementById('poemContentArea');
+const btnViewRefinedPoem = document.getElementById('btnViewRefinedPoem');
+const btnViewDraftPoem = document.getElementById('btnViewDraftPoem');
+const currentViewNotice = document.getElementById('currentViewNotice');
+
 const poemTitle = document.getElementById('poemTitle');
 const poemDate = document.getElementById('poemDate');
 const poemAuthorTag = document.getElementById('poemAuthorTag');
 const poemBody = document.getElementById('poemBody');
 const poemNotes = document.getElementById('poemNotes');
+
+// 한국 시문학 심사평가위원 3인 평가 영역 (Ver-9)
+const judgesReviewSection = document.getElementById('judgesReviewSection');
+const judgesOverallScore = document.getElementById('judgesOverallScore');
+const critiqueSummaryText = document.getElementById('critiqueSummaryText');
+const judgesCardsGrid = document.getElementById('judgesCardsGrid');
+const improvementsList = document.getElementById('improvementsList');
+
 const poemActions = document.getElementById('poemActions');
+const reRefinePoemBtn = document.getElementById('reRefinePoemBtn');
 const copyPoemBtn = document.getElementById('copyPoemBtn');
 const downloadImageBtn = document.getElementById('downloadImageBtn');
 
@@ -1554,15 +1572,20 @@ async function startPoemRecitation() {
   try {
     clearRecitationHighlights();
 
+    // 활성화된 뷰(초고 또는 글다듬기 완성작)의 제목과 본문으로 낭송 (Ver-9)
+    const isDraft = (state.currentPoemView === 'draft');
+    const activeTitle = isDraft && state.currentPoem.draft ? state.currentPoem.draft.title : state.currentPoem.title;
+    const activeBody = isDraft && state.currentPoem.draft ? state.currentPoem.draft.body : state.currentPoem.body;
+
     // 1. 시 제목 낭독 및 하이라이트
     setRecitationHighlight('poemTitle');
-    await speakSegment(`${state.currentPoem.title}.`, profile);
+    await speakSegment(`${activeTitle}.`, profile);
     if (speechAbortController) return;
     await waitDelay(profile.stanzaPauseMs);
     if (speechAbortController) return;
 
     // 2. 문단(연) 내 행(Line) 단위 실시간 낭독 및 연한 노랑색 행 하이라이트
-    const stanzas = state.currentPoem.body.split(/\n\s*\n/);
+    const stanzas = activeBody.split(/\n\s*\n/);
     for (let sIndex = 0; sIndex < stanzas.length; sIndex++) {
       if (speechAbortController) return;
       const stanzaText = stanzas[sIndex].trim();
@@ -1610,17 +1633,19 @@ async function startPoemRecitation() {
 
 /**
  * TTS 음성 합성용 텍스트 정제 함수
- * - 요구사항: TTS에서 *는 음성변환하지 말고 스킵
- * - 반각 별표(*), 전각 별표(＊), 특수 별 기호(✦,★,☆), 불릿(•,·) 및 마크다운(#, `, ~, _)을 완전 제거하여
- *   음성 합성 시 "별표"나 기호명이 발화되는 문제를 원천 차단
+ * - 요구사항 1: TTS에서 *는 음성변환하지 말고 스킵 (Ver-1)
+ * - 요구사항 2: TTS에서 /는 음성변환하지 말고 스킵 (Ver-9)
+ * - 반각 별표(*), 전각 별표(＊), 특수 별 기호(✦,★,☆), 불릿(•,·), 슬래시(/, ／, ⁄, ⧸), 마크다운(#, `, ~, _)을 완전 제거/스킵
+ *   음성 합성 시 "별표", "슬래시", "나누기", "빗금" 등 기호명이 발화되는 문제를 원천 차단하고 자연스러운 호흡 유지
  */
 function sanitizeTextForSpeech(text) {
   if (!text) return '';
   return text
-    .replace(/[\*＊✦★☆•·]/g, '') // 별표 및 기호 문자 완전 스킵
-    .replace(/#+/g, '')          // 마크다운 헤더 기호 제거
-    .replace(/[`~_]/g, '')        // 백틱, 물결, 밑줄 제거
-    .replace(/\s+/g, ' ')         // 공백 정돈
+    .replace(/[\*＊✦★☆•·]/g, '')  // 별표 및 기호 문자 완전 스킵
+    .replace(/[\/／⁄⧸]/g, ' ')      // 슬래시(/) 문자 음성 변환 스킵 (자연스러운 행간 호흡 공백으로 대체)
+    .replace(/#+/g, '')           // 마크다운 헤더 기호 제거
+    .replace(/[`~_]/g, '')         // 백틱, 물결, 밑줄 제거
+    .replace(/\s+/g, ' ')          // 공백 정돈
     .trim();
 }
 
@@ -1959,6 +1984,19 @@ function setupEventListeners() {
 
   // 서정시 짓기 버튼
   generatePoemBtn.addEventListener('click', handleGeneratePoem);
+
+  // [Ver-9] 초고 vs 완성작 뷰 전환 버튼
+  if (btnViewRefinedPoem) {
+    btnViewRefinedPoem.addEventListener('click', () => switchPoemView('refined'));
+  }
+  if (btnViewDraftPoem) {
+    btnViewDraftPoem.addEventListener('click', () => switchPoemView('draft'));
+  }
+
+  // [Ver-9] 3인 심사위원 글다듬기 (재퇴고) 버튼
+  if (reRefinePoemBtn) {
+    reRefinePoemBtn.addEventListener('click', handleReRefinePoem);
+  }
 
   // 텍스트 복사 & 이미지 저장
   copyPoemBtn.addEventListener('click', copyPoemToClipboard);
@@ -2441,6 +2479,30 @@ async function handleGeneratePoem() {
   const prosodyDisplayName = PROSODY_STYLES[prosodyStyle]?.name || '자동 맞춤';
   loadingWordsPreview.textContent = `[선택 시어: ${words.join(' · ')}]${emotion ? ` · 감정: ${emotion}` : ''} · 운율: ${prosodyDisplayName}`;
 
+  const stepTimers = [];
+  if (pipelineStep1) {
+    pipelineStep1.classList.add('active');
+    if (pipelineStep2) pipelineStep2.classList.remove('active');
+    if (pipelineStep3) pipelineStep3.classList.remove('active');
+  }
+  if (loadingMessage) {
+    loadingMessage.textContent = '1단계: 시인이 벼루에 먹을 갈고 서정시 초고(初稿)를 집필 중입니다...';
+  }
+
+  stepTimers.push(setTimeout(() => {
+    if (state.isGenerating) {
+      if (pipelineStep2) pipelineStep2.classList.add('active');
+      if (loadingMessage) loadingMessage.textContent = '2단계: 한국 시문학 심사평가위원 3인의 정밀 합평 및 채점 중...';
+    }
+  }, 1100));
+
+  stepTimers.push(setTimeout(() => {
+    if (state.isGenerating) {
+      if (pipelineStep3) pipelineStep3.classList.add('active');
+      if (loadingMessage) loadingMessage.textContent = '3단계: 심사평을 바탕으로 운율과 심상을 다듬어 최종 서정시 재구성(퇴고) 중...';
+    }
+  }, 2300));
+
   try {
     let result = null;
 
@@ -2474,7 +2536,7 @@ async function handleGeneratePoem() {
       if (data.fallbackOccurred) {
         showToast(`🔒 서버 혼잡을 극복하고 [${data.model}] 모델로 시가 안전하게 창작되었습니다 ✨`);
       } else {
-        showToast('🔒 보안 백엔드 (PDF 운율·시인풍·감정 융합)로 시가 창작되었습니다 ✨');
+        showToast('🔒 3인 심사평가위원 합평 및 글다듬기를 거쳐 완성된 서정시입니다 ✨');
       }
     }
     // 2순위: GitHub Pages 클라이언트 키
@@ -2485,7 +2547,7 @@ async function handleGeneratePoem() {
       if (clientResult.fallbackOccurred) {
         showToast(`Gemini AI (${clientResult.usedModel})로 서버 혼잡을 자동 극복하고 시를 창작했습니다 ✨`);
       } else {
-        showToast('Google Gemini AI (PDF 운율 융합)를 통해 실시간 시가 창작되었습니다 ✨');
+        showToast('Google Gemini AI (3인 심사위원 합평·퇴고)를 통해 시가 창작되었습니다 ✨');
       }
     }
     // 3순위: 데모 템플릿
@@ -2493,7 +2555,7 @@ async function handleGeneratePoem() {
       await new Promise(r => setTimeout(r, 1100));
       result = generateDemoPoem(words, state.selectedMood, emotion, prosodyStyle);
       renderPoem(result, words, false);
-      showToast('시원(詩苑) 대표 시풍 데모 모드로 생성되었습니다.');
+      showToast('시원(詩苑) 대표 시풍 데모 모드 (3인 심사위원 합평 포함)로 생성되었습니다.');
     }
 
     // TTS 감성 튜닝 UI 갱신
@@ -2511,6 +2573,7 @@ async function handleGeneratePoem() {
     renderPoem(fallbackPoem, words, false);
     updateTtsTuningDisplay();
   } finally {
+    stepTimers.forEach(t => clearTimeout(t));
     state.isGenerating = false;
     generatePoemBtn.disabled = false;
     loadingState.classList.add('hidden');
@@ -2794,21 +2857,72 @@ function generateDemoPoem(words, mood, emotion = '', prosodyStyle = 'auto') {
     }
   };
 
+  const defaultJudges = [
+    {
+      name: '김형상 심사위원',
+      role: '시적 이미지 & 감각적 은유',
+      score: 93,
+      critique: `제시된 시어(${w1}, ${w2}, ${w3})의 감각적 심상이 선명하게 형상화되었으며, 상투적 클리셰를 지양하고 신선한 시각적 묘사를 빚어냈습니다.`,
+      advice: '추상적 서술을 지양하고 구체적인 사물의 질감과 빛깔을 더욱 선명하게 부각하도록 퇴고를 권고합니다.'
+    },
+    {
+      name: '박가락 심사위원',
+      role: '운율학 & 한국어 음악성',
+      score: 91,
+      critique: '우리말 특유의 유려한 음보율과 말의 가락이 살아있어, 낭독 시 입술에 부드럽게 감기는 리듬감이 돋보입니다.',
+      advice: '행간과 연간의 쉼표 호흡을 정돈하고 울림소리(ㄴ, ㄹ, ㅁ, ㅇ)의 내운을 촘촘히 배치하여 음악성을 높이세요.'
+    },
+    {
+      name: '이여백 심사위원',
+      role: '서정성 & 시상 전개',
+      score: 95,
+      critique: '기승전결의 시상 흐름이 자연스럽고, 결구에 이르러 삶과 고독을 관통하는 깊은 철학적 여운을 훌륭히 남겼습니다.',
+      advice: '마지막 행의 시적 긴장감을 끝까지 유지하여 독자의 가슴속에 오래 머무는 아포리즘적 여운을 완성하세요.'
+    }
+  ];
+
+  const improvements = [
+    '1. 감각적 심상의 선명화 및 구체적 사물 형상화',
+    '2. 3음보·4음보의 호흡과 울림소리 내운 조탁',
+    '3. 결구의 시적 여운과 아포리즘적 종결성 강화'
+  ];
+
   if (demoTemplates[mood]) {
     const t = demoTemplates[mood];
     return {
       title: t.title,
       body: t.body,
       notes: t.notes + prosodySuffix,
+      draft: {
+        title: `${t.title} (초고)`,
+        body: t.body
+      },
+      judges: defaultJudges,
+      overallScore: 93.0,
+      critiqueSummary: '3인 심사평가위원의 정밀 합평을 거쳐 이미지와 운율이 조화롭게 다듬어진 완성작입니다.',
+      improvements,
+      isRefined: true,
       prosody_style: prosodyInfo.name
     };
   }
 
   // 그 외 33인 시인들을 위한 정밀 맞춤 생성기
+  const genTitle = `${poetInfo.name} 풍의 ${w1}과 ${w5}${emotionSuffix}`;
+  const genBody = `바람이 머물다 가는 자리에서\n가만히 흔들리는 ${w1},\n\n지나간 시간의 잔물결 위로\n아스라이 부서지는 ${w2}의 기억들.\n마음의 심연에 고여 든 ${w3}은\n어둠을 밝히는 한 줄기 빛이 된다.\n\n적어두지 못한 ${w4}를 마음에 품고\n다시금 고요히 대지에 내리는 ${w5},\n생의 침묵 속에 가장 순결한 언어로 피어난다.`;
+
   return {
-    title: `${poetInfo.name} 풍의 ${w1}과 ${w5}${emotionSuffix}`,
-    body: `바람이 머물다 가는 자리에서\n가만히 흔들리는 ${w1},\n\n지나간 시간의 잔물결 위로\n아스라이 부서지는 ${w2}의 기억들.\n마음의 심연에 고여 든 ${w3}은\n어둠을 밝히는 한 줄기 빛이 된다.\n\n적어두지 못한 ${w4}를 마음에 품고\n다시금 고요히 대지에 내리는 ${w5},\n생의 침묵 속에 가장 순결한 언어로 피어난다.`,
+    title: genTitle,
+    body: genBody,
     notes: `${poetInfo.name} 시인의 대표작 '${poetInfo.work}'의 시풍(${poetInfo.desc})을 기리며, 다섯 단어(${words.join(', ')})로 깊은 서정을 길어 올렸습니다.${emotion ? ` [부여된 감정: ${emotion}]` : ''}${prosodySuffix}`,
+    draft: {
+      title: `${genTitle} (초고)`,
+      body: genBody
+    },
+    judges: defaultJudges,
+    overallScore: 93.0,
+    critiqueSummary: '3인 심사평가위원의 정밀 합평을 거쳐 이미지와 운율이 조화롭게 다듬어진 완성작입니다.',
+    improvements,
+    isRefined: true,
     prosody_style: prosodyInfo.name
   };
 }
@@ -2818,10 +2932,55 @@ function generateDemoPoem(words, mood, emotion = '', prosodyStyle = 'auto') {
 // =========================================================
 function renderPoem(poemData, words, isLiveAI = false) {
   state.currentPoem = poemData;
+  state.currentWords = words;
+  state.currentPoemView = 'refined';
 
-  poemTitle.textContent = poemData.title;
-  poemNotes.innerHTML = poemData.notes;
+  // 1. 심사위원 평가 및 글다듬기 섹션 렌더링
+  if (judgesReviewSection) {
+    if (poemData.judges && Array.isArray(poemData.judges) && poemData.judges.length > 0) {
+      judgesReviewSection.classList.remove('hidden');
+      if (judgesOverallScore) {
+        judgesOverallScore.textContent = `${poemData.overallScore || 93.0}점`;
+      }
+      if (critiqueSummaryText) {
+        critiqueSummaryText.textContent = poemData.critiqueSummary || '3인 심사평가위원의 정밀 합평을 거쳐 이미지와 운율이 조화롭게 다듬어진 완성작입니다.';
+      }
+      if (judgesCardsGrid) {
+        judgesCardsGrid.innerHTML = poemData.judges.map(j => `
+          <div class="judge-card">
+            <div class="judge-card-header">
+              <div class="judge-info">
+                <span class="judge-name">${escapeHtml(j.name)}</span>
+                <span class="judge-role-badge">${escapeHtml(j.role)}</span>
+              </div>
+              <span class="judge-score-pill">${j.score || 92}점</span>
+            </div>
+            <p class="judge-critique-text">${escapeHtml(j.critique)}</p>
+            <div class="judge-advice-box">
+              <strong>💡 퇴고 권고:</strong> ${escapeHtml(j.advice)}
+            </div>
+          </div>
+        `).join('');
+      }
+      if (improvementsList) {
+        const imps = poemData.improvements || [
+          '1. 감각적 심상의 선명화 및 구체적 사물 형상화',
+          '2. 3음보·4음보의 호흡과 울림소리 내운 조탁',
+          '3. 결구의 시적 여운과 아포리즘적 종결성 강화'
+        ];
+        improvementsList.innerHTML = imps.map(imp => `
+          <li class="improvement-item">
+            <span class="imp-bullet">✨</span>
+            <span>${escapeHtml(imp)}</span>
+          </li>
+        `).join('');
+      }
+    } else {
+      judgesReviewSection.classList.add('hidden');
+    }
+  }
 
+  // 2. 메타 태그 렌더링
   const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
   const voiceInfo = GOOGLE_TTS_VOICES[state.selectedVoiceName] || GOOGLE_TTS_VOICES.Iapetus;
   const voiceDisplayName = poemData.voice_name || state.selectedVoiceName;
@@ -2838,8 +2997,45 @@ function renderPoem(poemData, words, isLiveAI = false) {
     poemAuthorTag.textContent = `${poetInfo.name} 시풍 · 시원(詩苑) 시인 · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})${prosodyTag}`;
   }
 
-  // 시 문단(연, Stanza) 및 문단 내 행(Line) 단위 분할 렌더링
-  const rawStanzas = poemData.body.split(/\n\s*\n/);
+  poemNotes.innerHTML = poemData.notes;
+
+  // 3. 뷰 모드(기본: 글다듬기 완성작) 렌더링
+  switchPoemView('refined');
+
+  poemContentArea.classList.remove('hidden');
+  poemActions.classList.remove('hidden');
+}
+
+// 초고 vs 글다듬기 완성작 뷰 전환 함수
+function switchPoemView(viewMode) {
+  state.currentPoemView = viewMode;
+  if (!state.currentPoem) return;
+
+  const isDraft = (viewMode === 'draft');
+  const activeTitle = isDraft && state.currentPoem.draft ? state.currentPoem.draft.title : state.currentPoem.title;
+  const activeBody = isDraft && state.currentPoem.draft ? state.currentPoem.draft.body : state.currentPoem.body;
+
+  if (btnViewRefinedPoem && btnViewDraftPoem) {
+    if (isDraft) {
+      btnViewDraftPoem.classList.add('active');
+      btnViewDraftPoem.setAttribute('aria-selected', 'true');
+      btnViewRefinedPoem.classList.remove('active');
+      btnViewRefinedPoem.setAttribute('aria-selected', 'false');
+      if (currentViewNotice) currentViewNotice.textContent = '📜 초고(初稿) 원문 보기';
+    } else {
+      btnViewRefinedPoem.classList.add('active');
+      btnViewRefinedPoem.setAttribute('aria-selected', 'true');
+      btnViewDraftPoem.classList.remove('active');
+      btnViewDraftPoem.setAttribute('aria-selected', 'false');
+      if (currentViewNotice) currentViewNotice.textContent = '✨ 심사위원 조언 반영 완성본';
+    }
+  }
+
+  poemTitle.textContent = activeTitle;
+
+  // 행/연 분할 렌더링
+  const rawStanzas = (activeBody || '').split(/\n\s*\n/);
+  const words = state.currentWords || [];
   const stanzasHtml = rawStanzas.map((stanzaText, sIndex) => {
     const rawLines = stanzaText.split('\n');
     const linesHtml = rawLines.map((lineText, lIndex) => {
@@ -2857,8 +3053,56 @@ function renderPoem(poemData, words, isLiveAI = false) {
   }).join('');
 
   poemBody.innerHTML = stanzasHtml;
-  poemContentArea.classList.remove('hidden');
-  poemActions.classList.remove('hidden');
+}
+
+// 3인 심사위원 글다듬기 (재퇴고) 핸들러
+async function handleReRefinePoem() {
+  if (!state.currentPoem || state.isGenerating) return;
+
+  state.isGenerating = true;
+  if (reRefinePoemBtn) reRefinePoemBtn.disabled = true;
+  showToast('✨ 한국 시문학 심사평가위원 3인에게 재합평 및 글다듬기(재퇴고)를 요청 중입니다...');
+
+  try {
+    const emotion = poemEmotionInput ? poemEmotionInput.value.trim() : '';
+    const prosodyStyle = poemProsodySelect ? poemProsodySelect.value : (state.selectedProsody || 'auto');
+
+    let refinedResult = null;
+    if (state.isBackendOnline && state.hasServerKey) {
+      const resp = await fetch('/api/refine-poem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: state.currentPoem.title,
+          body: state.currentPoem.body,
+          mood: state.selectedMood,
+          voice_name: state.selectedVoiceName,
+          emotion,
+          prosody_style: prosodyStyle,
+          model: state.selectedModel
+        })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+      refinedResult = data.poem;
+    } else {
+      await new Promise(r => setTimeout(r, 1200));
+      refinedResult = generateDemoPoem(state.currentWords || ['시', '바람', '별', '하늘', '노래'], state.selectedMood, emotion, prosodyStyle);
+    }
+
+    renderPoem(refinedResult, state.currentWords || [], true);
+    showToast('✨ 3인 심사위원의 정밀 합평을 거쳐 한층 더 유려하게 시가 글다듬기되었습니다!');
+  } catch (err) {
+    console.error('글다듬기 실패:', err);
+    showToast(`글다듬기 오류: ${err.message}`);
+  } finally {
+    state.isGenerating = false;
+    if (reRefinePoemBtn) reRefinePoemBtn.disabled = false;
+  }
 }
 
 function escapeHtml(text) {
