@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-3';
+const APP_VERSION = 'Ver-4';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -897,6 +897,7 @@ const bgmTrackTitle = document.getElementById('bgmTrackTitle');
 const bgmPlayToggleBtn = document.getElementById('bgmPlayToggleBtn');
 const bgmPlayIcon = document.getElementById('bgmPlayIcon');
 const bgmPlayText = document.getElementById('bgmPlayText');
+const bgmStopBtn = document.getElementById('bgmStopBtn');
 const bgmRefreshBtn = document.getElementById('bgmRefreshBtn');
 const bgmSearchYoutubeBtn = document.getElementById('bgmSearchYoutubeBtn');
 const bgmVideoToggleBtn = document.getElementById('bgmVideoToggleBtn');
@@ -1159,6 +1160,33 @@ function toggleBgm() {
     state.ytPlayer.playVideo();
     showToast('유튜브 서정 연주곡을 재생합니다 🎵');
   }
+}
+
+// 배경음악 완전 정지 함수
+function stopBgm() {
+  if (!state.ytPlayer) {
+    showToast('배경음악 플레이어가 아직 준비되지 않았습니다.');
+    return;
+  }
+
+  try {
+    if (typeof state.ytPlayer.stopVideo === 'function') {
+      state.ytPlayer.stopVideo();
+    } else if (typeof state.ytPlayer.pauseVideo === 'function') {
+      state.ytPlayer.pauseVideo();
+      if (typeof state.ytPlayer.seekTo === 'function') {
+        state.ytPlayer.seekTo(0, true);
+      }
+    }
+  } catch (err) {
+    console.warn('BGM 정지 오류:', err);
+  }
+
+  state.isBgmPlaying = false;
+  if (bgmPlayIcon) bgmPlayIcon.textContent = '▶️';
+  if (bgmPlayText) bgmPlayText.textContent = 'BGM 재생';
+  if (bgmPlayToggleBtn) bgmPlayToggleBtn.classList.remove('playing');
+  showToast('배경음악을 완전히 정지했습니다 ⏹️');
 }
 
 function switchBgmForMood(mood, autoPlay = false) {
@@ -1682,6 +1710,9 @@ function showToast(message, duration = 2600) {
 function setupEventListeners() {
   // 유튜브 BGM 컨트롤
   bgmPlayToggleBtn.addEventListener('click', toggleBgm);
+  if (bgmStopBtn) {
+    bgmStopBtn.addEventListener('click', stopBgm);
+  }
   bgmVideoToggleBtn.addEventListener('click', toggleVideoContainer);
   bgmVolumeSlider.addEventListener('input', handleVolumeChange);
 
