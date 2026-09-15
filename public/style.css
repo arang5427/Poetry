@@ -310,6 +310,267 @@ body {
   padding-left: 34px;
 }
 
+/* =========================================================
+   [Ver-7] 사진 업로드 & AI 분석(Vision) 영역 스타일
+   ========================================================= */
+.step-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-text-action.photo-action-btn {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.btn-text-action.photo-action-btn:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #14532d;
+  transform: translateY(-1px);
+}
+
+.photo-analysis-area {
+  margin-bottom: 16px;
+  padding-left: 34px;
+}
+
+.photo-drop-zone {
+  border: 2px dashed #d6cbba;
+  background: #faf8f5;
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.photo-drop-zone:hover,
+.photo-drop-zone.dragover {
+  border-color: #059669;
+  background: #f0fdf4;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08);
+  transform: translateY(-1px);
+}
+
+.photo-drop-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.photo-drop-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.photo-drop-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.photo-drop-primary {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.photo-drop-primary strong {
+  color: #059669;
+  text-decoration: underline;
+}
+
+.photo-drop-secondary {
+  font-size: 0.76rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* 사진 분석 중 로딩 스피너 */
+.photo-analyzing-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px;
+  background: #f0fdf4;
+  border: 1.5px solid #a7f3d0;
+  border-radius: var(--radius-md);
+  animation: pulsePhotoBg 1.5s infinite alternate;
+}
+
+@keyframes pulsePhotoBg {
+  from { background-color: #f0fdf4; }
+  to { background-color: #dcfce7; }
+}
+
+.photo-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(5, 150, 105, 0.2);
+  border-top-color: #059669;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.photo-analyzing-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #065f46;
+  margin: 0;
+}
+
+/* 분석 완료 미리보기 & 50자 설명 카드 */
+.photo-preview-container {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  padding: 12px;
+  background: #fcfbf9;
+  border: 1.5px solid #dcd3c1;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.3s ease;
+}
+
+.photo-thumb-col {
+  flex-shrink: 0;
+}
+
+.photo-thumb-frame {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid #d6cbba;
+  background: #111827;
+}
+
+.photo-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.photo-remove-btn:hover {
+  background: #dc2626;
+}
+
+.photo-desc-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.photo-desc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.photo-desc-badge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #047857;
+  background: #ecfdf5;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.photo-desc-counter {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.photo-description-text {
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #1f2937;
+  margin: 0;
+  word-break: keep-all;
+}
+
+.photo-desc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-micro-action {
+  background: #ede9fe;
+  border: 1px solid #ddd6fe;
+  color: #5b21b6;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-micro-action:hover {
+  background: #7c3aed;
+  color: #ffffff;
+  border-color: #6d28d9;
+}
+
+.btn-micro-action.secondary {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+}
+
+.btn-micro-action.secondary:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+@media (max-width: 600px) {
+  .photo-analysis-area {
+    padding-left: 0;
+  }
+  .photo-preview-container {
+    flex-direction: column;
+  }
+  .photo-thumb-frame {
+    width: 100%;
+    height: 140px;
+  }
+}
+
 /* 5개 단어 입력 2열 그리드 */
 .words-inputs-grid {
   display: grid;

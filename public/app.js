@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-6';
+const APP_VERSION = 'Ver-7';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -26,6 +26,12 @@ const state = {
   selectedProsody: 'auto',
   currentPoem: null,
   isGenerating: false,
+
+  // 사진 분석 상태 (Ver-7)
+  isAnalyzingPhoto: false,
+  uploadedPhotoBase64: null,
+  uploadedPhotoMime: 'image/jpeg',
+  photoDescription: '',
 
   // 유튜브 BGM 상태
   ytPlayer: null,
@@ -924,6 +930,19 @@ const emotionTags = document.getElementById('emotionTags');
 const poemProsodySelect = document.getElementById('poemProsodySelect');
 const generatePoemBtn = document.getElementById('generatePoemBtn');
 const randomWordsBtn = document.getElementById('randomWordsBtn');
+
+// 사진 분석 요소 (Ver-7)
+const photoUploadTriggerBtn = document.getElementById('photoUploadTriggerBtn');
+const photoFileInput = document.getElementById('photoFileInput');
+const photoDropZone = document.getElementById('photoDropZone');
+const photoAnalyzingState = document.getElementById('photoAnalyzingState');
+const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+const photoThumbnail = document.getElementById('photoThumbnail');
+const photoRemoveBtn = document.getElementById('photoRemoveBtn');
+const photoDescriptionText = document.getElementById('photoDescriptionText');
+const photoDescCharCount = document.getElementById('photoDescCharCount');
+const applyPhotoDescToEmotionBtn = document.getElementById('applyPhotoDescToEmotionBtn');
+const reuploadPhotoBtn = document.getElementById('reuploadPhotoBtn');
 
 // 시 전시 영역
 const emptyState = document.getElementById('emptyState');
@@ -1987,6 +2006,333 @@ function setupEventListeners() {
   apiModal.addEventListener('click', (e) => {
     if (e.target === apiModal) apiModal.classList.add('hidden');
   });
+
+  // [Ver-7] 사진 분석 이벤트 리스너 등록
+  setupPhotoAnalysisListeners();
+}
+
+// =========================================================
+// 6-1. [Ver-7] 사진 분석(Vision) 및 시어 5개 자동 추출 엔진
+// =========================================================
+function setupPhotoAnalysisListeners() {
+  if (photoUploadTriggerBtn && photoFileInput) {
+    photoUploadTriggerBtn.addEventListener('click', () => {
+      photoFileInput.click();
+    });
+  }
+
+  if (reuploadPhotoBtn && photoFileInput) {
+    reuploadPhotoBtn.addEventListener('click', () => {
+      photoFileInput.click();
+    });
+  }
+
+  if (photoDropZone && photoFileInput) {
+    photoDropZone.addEventListener('click', () => {
+      photoFileInput.click();
+    });
+
+    // 드래그 앤 드롭 이벤트
+    ['dragenter', 'dragover'].forEach(eventName => {
+      photoDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        photoDropZone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      photoDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        photoDropZone.classList.remove('dragover');
+      });
+    });
+
+    photoDropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        handlePhotoFile(dt.files[0]);
+      }
+    });
+  }
+
+  if (photoFileInput) {
+    photoFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handlePhotoFile(e.target.files[0]);
+      }
+    });
+  }
+
+  if (photoRemoveBtn) {
+    photoRemoveBtn.addEventListener('click', clearUploadedPhoto);
+  }
+
+  if (applyPhotoDescToEmotionBtn && poemEmotionInput) {
+    applyPhotoDescToEmotionBtn.addEventListener('click', () => {
+      if (state.photoDescription) {
+        poemEmotionInput.value = state.photoDescription;
+        poemEmotionInput.focus();
+        if (emotionTags) {
+          emotionTags.querySelectorAll('.emotion-tag-btn').forEach(b => b.classList.remove('active'));
+        }
+        showToast('사진 분석 설명이 시 감정에 반영되었습니다 💭');
+      }
+    });
+  }
+}
+
+// 캔버스를 이용한 브라우저 단 이미지 리사이징 & 압축 (최대 1280px, 빠른 업로드 보장)
+function resizeImageToCanvas(file, maxDimension = 1280) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = 'image/jpeg';
+        const base64Data = canvas.toDataURL(mimeType, 0.85);
+        resolve({ base64Data, mimeType, width, height });
+      };
+      img.onerror = () => reject(new Error('이미지 로딩에 실패했습니다.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('파일 읽기에 실패했습니다.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// 사진 파일 처리 및 AI 분석 오케스트레이션
+async function handlePhotoFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    showToast('이미지 파일(JPG, PNG, WebP 등)만 업로드할 수 있습니다.');
+    return;
+  }
+
+  try {
+    // 1. UI 전환: 드롭존 숨기고 분석 스피너 노출
+    if (photoDropZone) photoDropZone.classList.add('hidden');
+    if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
+    if (photoAnalyzingState) photoAnalyzingState.classList.remove('hidden');
+    state.isAnalyzingPhoto = true;
+
+    // 2. 이미지 리사이징 & 압축
+    const { base64Data, mimeType } = await resizeImageToCanvas(file);
+    state.uploadedPhotoBase64 = base64Data;
+    state.uploadedPhotoMime = mimeType;
+
+    // 3. API 호출
+    let analysisResult = null;
+
+    // 1순위: 백엔드 보안 분석
+    if (state.isBackendOnline && state.hasServerKey) {
+      const resp = await fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64Data,
+          mimeType,
+          model: state.selectedModel
+        })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${resp.status} 오류`);
+      }
+
+      analysisResult = await resp.json();
+    }
+    // 2순위: GitHub Pages 클라이언트 키
+    else if (!state.isBackendOnline && state.clientKey && state.clientKey.trim().length > 5) {
+      analysisResult = await callClientGeminiVisionApi(base64Data, mimeType, state.clientKey, state.selectedModel);
+    }
+    // 3순위: 데모 모드
+    else {
+      await new Promise(r => setTimeout(r, 1200));
+      analysisResult = generateDemoPhotoAnalysis();
+    }
+
+    // 4. 결과 적용
+    const words = analysisResult.words || [];
+    let description = analysisResult.description || '고요한 빛과 자연의 서정이 머무는 풍경';
+    if (description.length > 50) {
+      description = description.slice(0, 48) + '..';
+    }
+    state.photoDescription = description;
+
+    // 5개 단어 입력창에 순차 바인딩 및 펄스 효과
+    words.forEach((w, idx) => {
+      if (wordInputs[idx]) {
+        wordInputs[idx].value = w;
+        wordInputs[idx].classList.remove('input-pulse');
+        void wordInputs[idx].offsetWidth;
+        wordInputs[idx].classList.add('input-pulse');
+      }
+    });
+
+    // 썸네일 및 50자 이내 설명란 렌더링
+    if (photoThumbnail) photoThumbnail.src = base64Data;
+    if (photoDescriptionText) photoDescriptionText.textContent = description;
+    if (photoDescCharCount) photoDescCharCount.textContent = `${description.length}/50자`;
+
+    if (photoAnalyzingState) photoAnalyzingState.classList.add('hidden');
+    if (photoPreviewContainer) photoPreviewContainer.classList.remove('hidden');
+    showToast(`사진 분석 완료! 시어 5개가 자동 입력되었습니다 📷✨`);
+
+  } catch (err) {
+    console.error('사진 분석 오류:', err);
+    showToast(`사진 분석 실패: ${err.message}`);
+    if (photoAnalyzingState) photoAnalyzingState.classList.add('hidden');
+    if (photoDropZone) photoDropZone.classList.remove('hidden');
+  } finally {
+    state.isAnalyzingPhoto = false;
+    if (photoFileInput) photoFileInput.value = '';
+  }
+}
+
+// 클라이언트 Gemini Vision 멀티모달 호출 (GitHub Pages 지원)
+async function callClientGeminiVisionApi(base64Data, mimeType, apiKey, model = 'gemini-3.8-flash') {
+  const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '').trim();
+  const modelsToTry = [model, ...CLIENT_FALLBACK_CHAIN.filter(m => m !== model)];
+
+  const systemInstruction = `당신은 사진에 깃든 시각적 정서와 서정적 울림을 예리하게 포착하는 한국 서정시 예술가입니다.
+사진을 감상하고, 사진의 분위기, 색채, 빛과 어둠, 계절감, 자연물, 서정적 심상을 종합 분석하여 한국어 서정 시어 5개와 50자 이내의 함축적인 시적 설명을 작성하세요.`;
+
+  const userPrompt = `
+제공된 사진을 깊이 있게 관찰하고 분석하여 다음 두 가지를 유효한 JSON 형식으로만 응답해 주세요:
+
+1. "description": 사진에 나타난 정경과 서정적 분위기를 감성적으로 묘사한 설명 (반드시 공백 포함 한국어 50자 이내).
+2. "words": 이 사진의 모티프와 정서를 가장 잘 대변하는 아름다운 한국어 서정 시어(명사) 정확히 5개 배열.
+
+[🚨 엄격한 시어 선정 지침 (Negative Constraints)]
+- 다음 17개 상투적 클리셰 시어는 절대로 words에 포함하지 마세요:
+[${FORBIDDEN_POETIC_WORDS.join(', ')}]
+- 17대 금지어 대신, 사진 속 구체적인 사물, 색감, 자연물, 감각적 시어(예: 윤슬, 달빛, 노을, 파도, 숲, 이슬, 바람결, 그늘, 모래, 황혼, 등불, 바다 등)를 적극 선정하세요.
+- 각 시어는 군더더기 없는 순수 명사 1~3단어 길이로 작성하세요.
+
+반드시 다른 부연설명 없이 오직 아래와 같은 유효한 JSON 형식으로만 출력하세요:
+{
+  "description": "...",
+  "words": ["단어1", "단어2", "단어3", "단어4", "단어5"]
+}
+`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            inlineData: {
+              mimeType: mimeType || 'image/jpeg',
+              data: cleanBase64
+            }
+          },
+          {
+            text: `${systemInstruction}\n\n${userPrompt}`
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      topP: 0.9,
+      maxOutputTokens: 1024
+    }
+  };
+
+  let lastError = '서버 응답 없음';
+  for (const currentModel of modelsToTry) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          let parsed = null;
+          const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+          else parsed = JSON.parse(rawText);
+
+          let words = (parsed.words || [])
+            .map(w => String(w || '').trim())
+            .filter(w => w.length > 0 && !FORBIDDEN_POETIC_WORDS.includes(w))
+            .slice(0, 5);
+          
+          const defaultPool = ['윤슬', '달빛', '바람', '등불', '기다림'];
+          while (words.length < 5) {
+            const pick = defaultPool.find(w => !words.includes(w));
+            if (pick) words.push(pick);
+            else words.push('하늘');
+          }
+
+          let description = String(parsed.description || '').trim();
+          if (description.length > 50) description = description.slice(0, 48) + '..';
+
+          return { success: true, words, description, model: currentModel };
+        }
+      }
+    } catch (err) {
+      lastError = err.message;
+    }
+  }
+
+  throw new Error(`사진 분석에 실패했습니다. (${lastError})`);
+}
+
+// 데모 모드 사진 분석 생성기
+function generateDemoPhotoAnalysis() {
+  const selectablePool = KOREAN_POETIC_WORDS_159.filter(w => !FORBIDDEN_POETIC_WORDS.includes(w));
+  const shuffled = [...selectablePool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const words = shuffled.slice(0, 5);
+  const sampleDescriptions = [
+    '황혼녘 붉게 물든 노을과 은빛 파도가 일렁이는 고요한 바다 풍경',
+    '아침 햇살에 반짝이는 풀잎과 잔잔한 바람이 빚어낸 맑은 서정',
+    '새벽 안개 짙게 내려앉은 숲길과 아련한 빛의 따스한 여운',
+    '달빛 어린 고요한 창가에서 길어 올린 아늑하고 깊은 사유의 공간',
+    '눈부신 햇살 아래 소박하게 피어난 들꽃의 순수하고 다정한 미소'
+  ];
+  const description = sampleDescriptions[Math.floor(Math.random() * sampleDescriptions.length)];
+  return { success: true, words, description, model: '시원 AI Vision 데모' };
+}
+
+// 업로드된 사진 제거
+function clearUploadedPhoto() {
+  state.uploadedPhotoBase64 = null;
+  state.uploadedPhotoMime = 'image/jpeg';
+  state.photoDescription = '';
+  if (photoThumbnail) photoThumbnail.src = '';
+  if (photoDescriptionText) photoDescriptionText.textContent = '';
+  if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
+  if (photoAnalyzingState) photoAnalyzingState.classList.add('hidden');
+  if (photoDropZone) photoDropZone.classList.remove('hidden');
+  if (photoFileInput) photoFileInput.value = '';
+  showToast('업로드된 사진이 제거되었습니다.');
 }
 
 // =========================================================
