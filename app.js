@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-1';
+const APP_VERSION = 'Ver-2';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -1395,7 +1395,27 @@ function previewVoiceActor() {
   window.speechSynthesis.speak(utterance);
 }
 
-// 지능형 서정 시 낭송 엔진 (연/행간 감성 지연 + 오디오 더킹)
+// 낭송 하이라이트 제어 헬퍼 함수
+function clearRecitationHighlights() {
+  if (poemTitle) poemTitle.classList.remove('reciting-active');
+  const allStanzas = document.querySelectorAll('.poem-stanza');
+  allStanzas.forEach(el => el.classList.remove('reciting-active'));
+  const notesContainer = document.querySelector('.notes-container');
+  if (notesContainer) notesContainer.classList.remove('reciting-active');
+}
+
+function setRecitationHighlight(target) {
+  clearRecitationHighlights();
+  if (!target) return;
+  const el = typeof target === 'string' ? document.getElementById(target) : target;
+  if (el) {
+    el.classList.add('reciting-active');
+    // 현재 낭송 중인 문단 위치로 부드럽게 스크롤
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// 지능형 서정 시 낭송 엔진 (연/행간 감성 지연 + 문단 실시간 하이라이트 + 오디오 더킹)
 let speechAbortController = false;
 
 async function startPoemRecitation() {
@@ -1422,26 +1442,31 @@ async function startPoemRecitation() {
   showToast(`[Google ${gVoice.name} · ${state.voiceAge}대 ${genderName} · ${profile.style}] 낭송을 시작합니다...`);
 
   try {
-    // 1. 시 제목 낭독
+    clearRecitationHighlights();
+
+    // 1. 시 제목 낭독 및 하이라이트
+    setRecitationHighlight('poemTitle');
     await speakSegment(`${state.currentPoem.title}.`, profile);
     if (speechAbortController) return;
     await waitDelay(profile.stanzaPauseMs);
     if (speechAbortController) return;
 
-    // 2. 연(Stanza)별 자연스러운 시적 호흡 낭독
+    // 2. 연(Stanza)별 자연스러운 시적 호흡 낭독 및 실시간 연한 노랑색 문단 하이라이트
     const stanzas = state.currentPoem.body.split(/\n\s*\n/);
-    for (let stanza of stanzas) {
+    for (let i = 0; i < stanzas.length; i++) {
       if (speechAbortController) return;
-      const cleanStanza = stanza.trim();
+      const cleanStanza = stanzas[i].trim();
       if (!cleanStanza) continue;
 
+      setRecitationHighlight(`poemStanza-${i}`);
       await speakSegment(cleanStanza, profile);
       if (speechAbortController) return;
       await waitDelay(profile.stanzaPauseMs);
     }
 
-    // 3. 시인의 시작(詩作) 노트 낭독
+    // 3. 시인의 시작(詩作) 노트 낭독 및 하이라이트
     if (!speechAbortController && state.currentPoem.notes) {
+      setRecitationHighlight(document.querySelector('.notes-container'));
       await waitDelay(profile.stanzaPauseMs);
       if (speechAbortController) return;
       await speakSegment(`시인의 노트. ${state.currentPoem.notes}`, profile);
@@ -1449,6 +1474,7 @@ async function startPoemRecitation() {
   } catch (err) {
     console.warn('낭송 인터럽트:', err);
   } finally {
+    clearRecitationHighlights();
     stopSpeakingUI();
   }
 }
@@ -1519,6 +1545,7 @@ function toggleSpeech() {
 
 function stopSpeakingUI() {
   speechAbortController = true;
+  clearRecitationHighlights();
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
   }
@@ -2140,15 +2167,20 @@ function renderPoem(poemData, words, isLiveAI = false) {
     poemAuthorTag.textContent = `${poetInfo.name} 시풍 · 시원(詩苑) 시인 · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
   }
 
-  let formattedBody = escapeHtml(poemData.body);
-  words.forEach(w => {
-    if (w) {
-      const regex = new RegExp(`(${escapeRegex(w)})`, 'gi');
-      formattedBody = formattedBody.replace(regex, '<span class="highlight-word">$1</span>');
-    }
-  });
+  // 시 문단(연, Stanza)별로 분할하여 개별 문단 엘리먼트로 래핑
+  const rawStanzas = poemData.body.split(/\n\s*\n/);
+  const stanzasHtml = rawStanzas.map((stanzaText, index) => {
+    let formattedStanza = escapeHtml(stanzaText);
+    words.forEach(w => {
+      if (w) {
+        const regex = new RegExp(`(${escapeRegex(w)})`, 'gi');
+        formattedStanza = formattedStanza.replace(regex, '<span class="highlight-word">$1</span>');
+      }
+    });
+    return `<div class="poem-stanza" id="poemStanza-${index}" data-stanza-index="${index}">${formattedStanza}</div>`;
+  }).join('');
 
-  poemBody.innerHTML = formattedBody;
+  poemBody.innerHTML = stanzasHtml;
   poemContentArea.classList.remove('hidden');
   poemActions.classList.remove('hidden');
 }
