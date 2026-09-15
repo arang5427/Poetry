@@ -25,7 +25,7 @@
       <div class="brand">
         <div class="brand-seal">詩</div>
         <div class="brand-text">
-          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-8</span></h1>
+          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-9</span></h1>
           <p class="brand-subtitle">AI 한국 서정시 창작소 · 백엔드 보안 운영</p>
         </div>
       </div>
@@ -384,19 +384,42 @@
             </p>
           </div>
 
-          <!-- 로딩 상태 -->
+          <!-- 로딩 상태 (3단계 문학 파이프라인 실시간 안내) -->
           <div id="loadingState" class="poem-loading-state hidden">
             <div class="brush-loader">
               <div class="brush-stroke"></div>
               <div class="brush-stroke"></div>
               <div class="brush-stroke"></div>
             </div>
-            <p class="loading-message">시인이 벼루에 먹을 갈고 운율을 고르고 있습니다...</p>
+            <p id="loadingMessage" class="loading-message">1단계: 시인이 벼루에 먹을 갈고 서정시 초고(初稿)를 집필 중입니다...</p>
+            <div class="pipeline-steps-indicator">
+              <span class="step-pill active" id="pipelineStep1">1. 초고 집필</span>
+              <span class="step-arrow">&rarr;</span>
+              <span class="step-pill" id="pipelineStep2">2. 3인 심사위원 합평</span>
+              <span class="step-arrow">&rarr;</span>
+              <span class="step-pill" id="pipelineStep3">3. 글다듬기 재구성</span>
+            </div>
             <span class="loading-words" id="loadingWordsPreview"></span>
           </div>
 
           <!-- 시 완성 출력 영역 -->
           <div id="poemContentArea" class="poem-content-area hidden">
+            <!-- [신규] 초고 vs 글다듬기 완성작 전환 탭 바 -->
+            <div class="poem-version-toggle-bar">
+              <div class="version-toggle-btns" role="tablist">
+                <button type="button" id="btnViewRefinedPoem" class="toggle-tab-btn active" role="tab" aria-selected="true">
+                  <span class="toggle-icon">✨</span>
+                  <span>최종 글다듬기 완성작</span>
+                  <span class="pill-badge-refined">3인 심사 통과</span>
+                </button>
+                <button type="button" id="btnViewDraftPoem" class="toggle-tab-btn" role="tab" aria-selected="false">
+                  <span class="toggle-icon">📜</span>
+                  <span>초고(初稿) 보기</span>
+                </button>
+              </div>
+              <span id="currentViewNotice" class="view-notice-badge">✨ 심사위원 조언 반영 완성본</span>
+            </div>
+
             <div class="poem-header">
               <h2 id="poemTitle" class="poem-title"></h2>
               <div class="poem-meta">
@@ -418,6 +441,44 @@
                 <span class="notes-title">시인의 시작(詩作) 노트</span>
               </div>
               <div id="poemNotes" class="poem-notes"></div>
+            </div>
+
+            <!-- [신규] 🏆 한국 시문학 심사평가위원 3인의 심사평 & 글다듬기 리포트 -->
+            <div id="judgesReviewSection" class="judges-review-section">
+              <div class="judges-header">
+                <div class="judges-title-wrap">
+                  <span class="judges-icon">🏆</span>
+                  <div>
+                    <h3 class="judges-title">한국 시문학 심사평가위원 3인 심사평 & 글다듬기 리포트</h3>
+                    <p class="judges-subtitle">초고를 심층 합평하여 이미지·운율·서정을 갈고닦아 완성작으로 재구성했습니다.</p>
+                  </div>
+                </div>
+                <div class="judges-score-badge">
+                  <span class="score-label">심사위원 평점</span>
+                  <span id="judgesOverallScore" class="score-value">93.0점</span>
+                </div>
+              </div>
+
+              <!-- 종합 합평 요약문 -->
+              <div class="critique-summary-box">
+                <p id="critiqueSummaryText" class="critique-summary-text"></p>
+              </div>
+
+              <!-- 3인 심사위원 개별 평가 카드 그리드 -->
+              <div class="judges-cards-grid" id="judgesCardsGrid">
+                <!-- JS에서 동적 렌더링 -->
+              </div>
+
+              <!-- 글다듬기(퇴고) 개선 포인트 박스 -->
+              <div class="improvements-box">
+                <div class="improvements-header">
+                  <span class="imp-icon">💎</span>
+                  <strong>3인 심사위원 조언 반영 퇴고 포인트 (글다듬기 성과)</strong>
+                </div>
+                <ul id="improvementsList" class="improvements-list">
+                  <!-- 개선 포인트 동적 렌더링 -->
+                </ul>
+              </div>
             </div>
 
             <!-- 시 낭송 성우 맞춤 설정 패널 (성별 / 20대·40대·60대 / Google TTS 30가지 음성) -->
@@ -560,6 +621,9 @@
 
           <!-- 하단 액션 도구바 -->
           <div id="poemActions" class="poem-actions hidden">
+            <button id="reRefinePoemBtn" class="action-btn refine-btn" type="button" title="3인 심사평가위원에게 다시 한번 글다듬기(재퇴고)를 요청합니다">
+              <span>✨ 3인 심사위원 글다듬기 (재퇴고)</span>
+            </button>
             <button id="copyPoemBtn" class="action-btn" title="시 본문 복사">
               <span>📋 텍스트 복사</span>
             </button>
@@ -618,7 +682,7 @@
         <div class="security-checklist">
           <h4>🛡️ 정보보안 지침 준수 & 시스템 정보</h4>
           <ul>
-            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-8</span> ("사진업로드및분석" 메뉴탭 · 사진업로드 박스 & 사진 표시창 · 시어 5개 자동 입력 · PDF 운율 융합)</li>
+            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-9</span> (TTS 슬래시 스킵 · 한국 시문학 심사평가위원 3인 평가 & 글다듬기 재구성 엔진)</li>
             <li>✅ <strong>Server-to-Server 통신</strong>: 백엔드 환경에서는 구글 API를 비공개 호출</li>
             <li>✅ <strong>환경변수 격리 (.env)</strong>: 소스 코드에 키를 하드코딩하지 않고 환경변수로 분리</li>
             <li>✅ <strong>Git 유출 차단 (.gitignore)</strong>: 깃허브 커밋 시 .env 파일 원천 배제</li>
