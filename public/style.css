@@ -971,25 +971,42 @@ body {
 
 /* 시 문단(연, Stanza) 엘리먼트 */
 .poem-stanza {
-  padding: 10px 16px;
-  margin-bottom: 22px;
+  padding: 6px 10px;
+  margin-bottom: 24px;
   border-radius: 8px;
-  border-left: 4px solid transparent;
-  white-space: pre-wrap;
-  transition: background-color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, transform 0.25s ease;
+  border-left: 3.5px solid transparent;
+  transition: background-color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 .poem-stanza:last-child {
   margin-bottom: 0;
 }
 
-/* [핵심 기능] 낭송 중인 문단 연한 노랑색 강조 효과 (Soft Yellow Highlight) */
-.poem-stanza.reciting-active {
-  background-color: #fef9c3; /* 부드럽고 따스한 연한 노랑색 */
+/* 현재 낭송 중인 문단(연) 은은한 외곽 가이드 */
+.poem-stanza.current-stanza {
+  border-left-color: rgba(245, 158, 11, 0.4);
+  background: rgba(254, 249, 195, 0.12);
+}
+
+/* 시의 각 행(Line) 단위 엘리먼트 */
+.poem-line {
+  display: block;
+  padding: 4px 12px;
+  margin: 2px 0;
+  border-radius: 6px;
+  border-left: 3.5px solid transparent;
+  line-height: 2.2;
+  white-space: pre-wrap;
+  transition: background-color 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease, transform 0.22s ease;
+}
+
+/* [핵심 기능] 낭송 중인 행(Line) 연한 노랑색 강조 효과 (Soft Yellow Highlight) */
+.poem-line.reciting-active {
+  background-color: #fef9c3; /* 부드럽고 따스한 연한 노랑색 (Soft Pastel Yellow) */
   border-left-color: #f59e0b; /* 황금빛 호박색 포인트 라인 */
-  box-shadow: 0 3px 16px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.2);
   color: #18181b;
-  transform: translateX(4px);
+  transform: translateX(5px);
 }
 
 /* 시어 하이라이트 */

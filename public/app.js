@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-2';
+const APP_VERSION = 'Ver-3';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -1399,7 +1399,9 @@ function previewVoiceActor() {
 function clearRecitationHighlights() {
   if (poemTitle) poemTitle.classList.remove('reciting-active');
   const allStanzas = document.querySelectorAll('.poem-stanza');
-  allStanzas.forEach(el => el.classList.remove('reciting-active'));
+  allStanzas.forEach(el => el.classList.remove('reciting-active', 'current-stanza'));
+  const allLines = document.querySelectorAll('.poem-line');
+  allLines.forEach(el => el.classList.remove('reciting-active'));
   const notesContainer = document.querySelector('.notes-container');
   if (notesContainer) notesContainer.classList.remove('reciting-active');
 }
@@ -1410,12 +1412,16 @@ function setRecitationHighlight(target) {
   const el = typeof target === 'string' ? document.getElementById(target) : target;
   if (el) {
     el.classList.add('reciting-active');
-    // 현재 낭송 중인 문단 위치로 부드럽게 스크롤
+    const parentStanza = el.closest('.poem-stanza');
+    if (parentStanza) {
+      parentStanza.classList.add('current-stanza');
+    }
+    // 현재 낭송 중인 행 위치로 부드럽게 스크롤
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
-// 지능형 서정 시 낭송 엔진 (연/행간 감성 지연 + 문단 실시간 하이라이트 + 오디오 더킹)
+// 지능형 서정 시 낭송 엔진 (연/행간 감성 지연 + 행 단위 실시간 하이라이트 + 오디오 더킹)
 let speechAbortController = false;
 
 async function startPoemRecitation() {
@@ -1451,17 +1457,36 @@ async function startPoemRecitation() {
     await waitDelay(profile.stanzaPauseMs);
     if (speechAbortController) return;
 
-    // 2. 연(Stanza)별 자연스러운 시적 호흡 낭독 및 실시간 연한 노랑색 문단 하이라이트
+    // 2. 문단(연) 내 행(Line) 단위 실시간 낭독 및 연한 노랑색 행 하이라이트
     const stanzas = state.currentPoem.body.split(/\n\s*\n/);
-    for (let i = 0; i < stanzas.length; i++) {
+    for (let sIndex = 0; sIndex < stanzas.length; sIndex++) {
       if (speechAbortController) return;
-      const cleanStanza = stanzas[i].trim();
-      if (!cleanStanza) continue;
+      const stanzaText = stanzas[sIndex].trim();
+      if (!stanzaText) continue;
 
-      setRecitationHighlight(`poemStanza-${i}`);
-      await speakSegment(cleanStanza, profile);
-      if (speechAbortController) return;
-      await waitDelay(profile.stanzaPauseMs);
+      const lines = stanzaText.split('\n');
+      for (let lIndex = 0; lIndex < lines.length; lIndex++) {
+        if (speechAbortController) return;
+        const cleanLine = lines[lIndex].trim();
+        if (!cleanLine) continue;
+
+        // 현재 낭송 중인 행(Line) 연한 노랑색 하이라이트 표시
+        setRecitationHighlight(`poemLine-${sIndex}-${lIndex}`);
+        await speakSegment(cleanLine, profile);
+        if (speechAbortController) return;
+
+        // 행간(Line Pause) 감성 호흡 지연
+        if (lIndex < lines.length - 1) {
+          await waitDelay(profile.linePauseMs);
+          if (speechAbortController) return;
+        }
+      }
+
+      // 연간(Stanza Pause) 감성 여운 지연
+      if (sIndex < stanzas.length - 1) {
+        await waitDelay(profile.stanzaPauseMs);
+        if (speechAbortController) return;
+      }
     }
 
     // 3. 시인의 시작(詩作) 노트 낭독 및 하이라이트
@@ -2167,17 +2192,22 @@ function renderPoem(poemData, words, isLiveAI = false) {
     poemAuthorTag.textContent = `${poetInfo.name} 시풍 · 시원(詩苑) 시인 · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
   }
 
-  // 시 문단(연, Stanza)별로 분할하여 개별 문단 엘리먼트로 래핑
+  // 시 문단(연, Stanza) 및 문단 내 행(Line) 단위 분할 렌더링
   const rawStanzas = poemData.body.split(/\n\s*\n/);
-  const stanzasHtml = rawStanzas.map((stanzaText, index) => {
-    let formattedStanza = escapeHtml(stanzaText);
-    words.forEach(w => {
-      if (w) {
-        const regex = new RegExp(`(${escapeRegex(w)})`, 'gi');
-        formattedStanza = formattedStanza.replace(regex, '<span class="highlight-word">$1</span>');
-      }
-    });
-    return `<div class="poem-stanza" id="poemStanza-${index}" data-stanza-index="${index}">${formattedStanza}</div>`;
+  const stanzasHtml = rawStanzas.map((stanzaText, sIndex) => {
+    const rawLines = stanzaText.split('\n');
+    const linesHtml = rawLines.map((lineText, lIndex) => {
+      let formattedLine = escapeHtml(lineText);
+      words.forEach(w => {
+        if (w) {
+          const regex = new RegExp(`(${escapeRegex(w)})`, 'gi');
+          formattedLine = formattedLine.replace(regex, '<span class="highlight-word">$1</span>');
+        }
+      });
+      return `<div class="poem-line" id="poemLine-${sIndex}-${lIndex}" data-stanza="${sIndex}" data-line="${lIndex}">${formattedLine || '&nbsp;'}</div>`;
+    }).join('');
+
+    return `<div class="poem-stanza" id="poemStanza-${sIndex}" data-stanza-index="${sIndex}">${linesHtml}</div>`;
   }).join('');
 
   poemBody.innerHTML = stanzasHtml;
