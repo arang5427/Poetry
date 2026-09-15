@@ -139,6 +139,22 @@ body {
   font-weight: 400;
 }
 
+.app-version-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #c4b5fd;
+  box-shadow: 0 1px 2px rgba(109, 40, 217, 0.08);
+  vertical-align: middle;
+}
+
 .brand-subtitle {
   font-size: 0.78rem;
   color: var(--text-secondary);

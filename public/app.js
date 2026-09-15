@@ -12,6 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
+const APP_VERSION = 'Ver-1';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -1452,11 +1453,31 @@ async function startPoemRecitation() {
   }
 }
 
+/**
+ * TTS 음성 합성용 텍스트 정제 함수
+ * - 요구사항: TTS에서 *는 음성변환하지 말고 스킵
+ * - 반각 별표(*), 전각 별표(＊), 특수 별 기호(✦,★,☆), 불릿(•,·) 및 마크다운(#, `, ~, _)을 완전 제거하여
+ *   음성 합성 시 "별표"나 기호명이 발화되는 문제를 원천 차단
+ */
+function sanitizeTextForSpeech(text) {
+  if (!text) return '';
+  return text
+    .replace(/[\*＊✦★☆•·]/g, '') // 별표 및 기호 문자 완전 스킵
+    .replace(/#+/g, '')          // 마크다운 헤더 기호 제거
+    .replace(/[`~_]/g, '')        // 백틱, 물결, 밑줄 제거
+    .replace(/\s+/g, ' ')         // 공백 정돈
+    .trim();
+}
+
 function speakSegment(text, profile) {
   return new Promise((resolve) => {
     if (speechAbortController) return resolve();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const cleanText = sanitizeTextForSpeech(text);
+    // 별표나 마크다운 기호 제거 후 남은 텍스트가 없으면(예: 구분선 *** 등) 발화 건너뜀
+    if (!cleanText) return resolve();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'ko-KR';
     if (profile.voice) utterance.voice = profile.voice;
     utterance.pitch = profile.pitch;
@@ -1517,6 +1538,12 @@ async function init() {
   const today = new Date();
   poemDate.textContent = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
 
+  const appVersionBadge = document.getElementById('appVersionBadge');
+  if (appVersionBadge) {
+    appVersionBadge.textContent = APP_VERSION;
+  }
+  console.log(`🌸 시원(詩苑) [${APP_VERSION}] 서정시 창작소가 준비되었습니다.`);
+
   if (poemMoodSelect) {
     state.selectedMood = poemMoodSelect.value || 'yoon_dongju';
   }
@@ -1544,12 +1571,13 @@ async function checkBackendStatus() {
       const data = await res.json();
       state.isBackendOnline = true;
       state.hasServerKey = data.hasServerKey;
+      const serverVer = data.version || APP_VERSION;
 
       if (data.hasServerKey) {
-        apiStatusBadge.textContent = '보안 서버 연동';
+        apiStatusBadge.textContent = `보안 서버 연동 (${serverVer})`;
         apiStatusBadge.className = 'status-badge live';
         backendStatusIcon.textContent = '🛡️';
-        backendStatusTitle.textContent = '백엔드 보안 연동 완료 (.env 키 암호화 보관)';
+        backendStatusTitle.textContent = `백엔드 보안 연동 완료 [${serverVer}] (.env 키 암호화)`;
         backendStatusDetail.innerHTML = '서버의 <code>.env</code> 파일에 등록된 API 키를 사용하여 서버-투-서버로 시를 창작합니다. 브라우저에 API 키가 절대 노출되지 않습니다.';
         clientKeySection.classList.add('hidden');
         clearApiKeyBtn.classList.add('hidden');
@@ -1835,13 +1863,23 @@ async function handleGeneratePoem() {
       const data = await response.json();
       result = data.poem;
       renderPoem(result, words, true);
-      showToast('🔒 보안 백엔드를 통해 안전하게 시가 창작되었습니다.');
+
+      if (data.fallbackOccurred) {
+        showToast(`🔒 서버 혼잡을 극복하고 [${data.model}] 모델로 시가 안전하게 창작되었습니다 ✨`);
+      } else {
+        showToast('🔒 보안 백엔드를 통해 안전하게 시가 창작되었습니다.');
+      }
     }
     // 2순위: GitHub Pages 클라이언트 키
     else if (!state.isBackendOnline && state.clientKey && state.clientKey.trim().length > 5) {
-      result = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey);
+      const clientResult = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey);
+      result = clientResult.poem;
       renderPoem(result, words, true);
-      showToast('Google Gemini AI를 통해 실시간 시가 창작되었습니다 ✨');
+      if (clientResult.fallbackOccurred) {
+        showToast(`Gemini AI (${clientResult.usedModel})로 서버 혼잡을 자동 극복하고 시를 창작했습니다 ✨`);
+      } else {
+        showToast('Google Gemini AI를 통해 실시간 시가 창작되었습니다 ✨');
+      }
     }
     // 3순위: 데모 템플릿
     else {
@@ -1872,7 +1910,15 @@ async function handleGeneratePoem() {
   }
 }
 
-// 클라이언트 Gemini API 호출 (GitHub Pages 정적 모드)
+// 클라이언트 Gemini API 호출 (Google 서버 트래픽 과부하 시 자동 재시도 및 모델 자동 전환 스마트 폴백)
+const CLIENT_FALLBACK_CHAIN = [
+  'gemini-3.8-flash',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-flash-latest'
+];
+
 async function callClientGeminiApi(words, model, mood, apiKey) {
   const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
 
@@ -1910,37 +1956,65 @@ async function callClientGeminiApi(words, model, mood, apiKey) {
     }
   };
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const modelsToTry = [model, ...CLIENT_FALLBACK_CHAIN.filter(m => m !== model)];
+  let lastError = '서버 응답 없음';
 
-  let response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  for (const currentModel of modelsToTry) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
 
-  if (!response.ok && response.status === 404 && model === 'gemini-3.8-flash') {
-    const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    response = await fetch(fallbackEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        let response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) {
+            return {
+              poem: parsePoem(rawText),
+              usedModel: currentModel,
+              fallbackOccurred: currentModel !== model
+            };
+          }
+        }
+
+        const errorData = await response.json().catch(() => ({}));
+        const status = response.status;
+        const errMessage = errorData.error?.message || `HTTP ${status} 오류`;
+        lastError = errMessage;
+
+        const isTrafficError = status === 503 || status === 429 || status === 500 ||
+          errMessage.includes('high traffic') || errMessage.includes('overloaded') || errMessage.includes('UNAVAILABLE') || errMessage.includes('capacity');
+        const isNotFoundError = status === 404 || errMessage.includes('not found') || errMessage.includes('no longer available');
+
+        if (attempt === 1 && isTrafficError) {
+          console.warn(`[Client Gemini 과부하 감지] ${currentModel} 1차 실패 (${errMessage}) -> 1.2초 후 재시도...`);
+          await new Promise(r => setTimeout(r, 1200));
+          continue;
+        }
+
+        if (isTrafficError || isNotFoundError) {
+          console.warn(`[Client Gemini 스마트 폴백] ${currentModel} 실패 -> 다음 모델 시도`);
+          break;
+        } else {
+          throw new Error(errMessage);
+        }
+      } catch (err) {
+        lastError = err.message;
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          break;
+        }
+      }
+    }
   }
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errMessage = errorData.error?.message || `HTTP ${response.status} 오류`;
-    throw new Error(errMessage);
-  }
-
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!rawText) {
-    throw new Error('Gemini API로부터 시 내용을 받아오지 못했습니다.');
-  }
-
-  return parsePoem(rawText);
+  throw new Error(`모든 AI 모델 서버가 혼잡합니다. 잠시 후 다시 시도해 주세요. (${lastError})`);
 }
 
 function parsePoem(rawText) {
