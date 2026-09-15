@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-4';
+const APP_VERSION = 'Ver-5';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -852,14 +852,33 @@ function getCurrentMoodTrack(mood, index = state.currentBgmIndex) {
   return { track: playlist[safeIdx], index: safeIdx, total: playlist.length };
 }
 
-// 감성 단어 추천 세트
-const POETIC_WORD_SETS = [
-  ['밤바다', '윤슬', '그리움', '편지', '별빛'],
-  ['낙엽', '발자국', '안개', '침묵', '찻잔'],
-  ['첫눈', '기다림', '골목길', '가로등', '숨결'],
-  ['노을', '민들레', '바람소리', '소나기', '언덕'],
-  ['동백꽃', '달그림자', '물결', '손안개', '기억'],
-  ['서리꽃', '새벽', '외투', '온기', '먼산']
+// 한국 대표 서정 시어 159선 (한국_시어_159개.MD 기반)
+const KOREAN_POETIC_WORDS_159 = [
+  // 1. 기존 대표 시어 (1~50)
+  '사람', '어머니', '아이', '얼굴', '눈', '손', '몸', '가슴', '입', '목숨',
+  '마음', '사랑', '생각', '꿈', '말', '소리', '이야기', '가난', '걱정', '후회',
+  '하늘', '바람', '바다', '산', '강', '물', '땅', '나무', '꽃', '새',
+  '밤', '아침', '저녁', '오늘', '하루', '날', '때', '시간', '달', '별',
+  '길', '집', '방', '마을', '거리', '산골', '나라', '세상', '속', '끝',
+  // 2. 추가 서정 시어 (51~150)
+  '새벽', '황혼', '노을', '여명', '석양', '어스름', '달빛', '별빛', '햇살', '그림자',
+  '구름', '안개', '이슬', '서리', '눈꽃', '빗방울', '소나기', '눈보라', '바람결', '물안개',
+  '숲', '들판', '풀잎', '낙엽', '꽃잎', '꽃봉오리', '새싹', '뿌리', '가지', '열매',
+  '봄', '여름', '가을', '겨울', '계절', '동백', '매화', '진달래', '국화', '갈대',
+  '파도', '물결', '여울', '시냇물', '샘물', '호수', '바닷가', '모래', '수평선', '나루',
+  '그리움', '외로움', '고독', '슬픔', '눈물', '한숨', '설렘', '기쁨', '아픔', '침묵',
+  '이별', '만남', '추억', '기억', '망각', '기다림', '약속', '인연', '그대', '당신',
+  '고향', '골목', '창문', '문턱', '지붕', '처마', '우물', '담장', '빈집', '오솔길',
+  '흔적', '발자국', '숨결', '향기', '체온', '떨림', '메아리', '울림', '노래', '기도',
+  '희망', '절망', '청춘', '세월', '순간', '영원', '운명', '생명', '죽음', '허무',
+  // 3. 한국 고유의 아름다운 시어 (151~159)
+  '윤슬', '시나브로', '서리꽃', '산그늘', '물비늘', '풋사랑', '꽃샘추위', '해사하다', '여백'
+];
+
+// 17대 상투적 클리셰 시어 (사용자가 명시적으로 입력하지 않은 경우 생성 배제)
+const FORBIDDEN_POETIC_WORDS = [
+  '공기', '온기', '발자국', '숨', '네온', '심장', '온도', '계절',
+  '손끝', '가로등', '박자', '쪽으로', '번져', '골목', '발끝', '볕살이', '괜히'
 ];
 
 // =========================================================
@@ -875,6 +894,8 @@ const wordInputs = [
 
 const geminiModelSelect = document.getElementById('geminiModelSelect');
 const poemMoodSelect = document.getElementById('poemMoodSelect');
+const poemEmotionInput = document.getElementById('poemEmotionInput');
+const emotionTags = document.getElementById('emotionTags');
 const generatePoemBtn = document.getElementById('generatePoemBtn');
 const randomWordsBtn = document.getElementById('randomWordsBtn');
 
@@ -1823,14 +1844,51 @@ function setupEventListeners() {
     updateTtsTuningDisplay();
   });
 
-  // 🎲 추천 단어 무작위 채우기
+  // 🎲 추천 단어 무작위 채우기 (한국 대표 시어 159선에서 중복 없이 5개 선정)
   randomWordsBtn.addEventListener('click', () => {
-    const randomSet = POETIC_WORD_SETS[Math.floor(Math.random() * POETIC_WORD_SETS.length)];
+    // 17대 클리셰 금지단어는 기본 무작위 추천 풀에서 배제하여 신선하고 품격 있는 시어만 추천
+    const selectablePool = KOREAN_POETIC_WORDS_159.filter(w => !FORBIDDEN_POETIC_WORDS.includes(w));
+    
+    // Fisher-Yates 셔플 알고리즘으로 무작위 5개 중복 없이 추출
+    const shuffled = [...selectablePool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const chosenWords = shuffled.slice(0, 5);
+
     wordInputs.forEach((input, index) => {
-      input.value = randomSet[index];
+      input.value = chosenWords[index];
+      input.classList.remove('input-pulse');
+      void input.offsetWidth; // 브라우저 리플로우 강제 트리거
+      input.classList.add('input-pulse');
     });
-    showToast('감성 시어 5개가 추천되었습니다 🎲');
+    showToast(`한국 대표 시어 159선에서 5개 시어가 추천되었습니다 🎲 (${chosenWords.slice(0, 3).join(', ')} 등)`);
   });
+
+  // 감정 태그 칩 클릭 및 직접 입력 이벤트 (시인풍과 융합)
+  if (emotionTags && poemEmotionInput) {
+    emotionTags.addEventListener('click', (e) => {
+      const btn = e.target.closest('.emotion-tag-btn');
+      if (!btn) return;
+      const tagEmotion = btn.dataset.emotion;
+      if (poemEmotionInput.value.trim() === tagEmotion) {
+        poemEmotionInput.value = '';
+        btn.classList.remove('active');
+      } else {
+        poemEmotionInput.value = tagEmotion;
+        emotionTags.querySelectorAll('.emotion-tag-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    });
+
+    poemEmotionInput.addEventListener('input', () => {
+      const currentVal = poemEmotionInput.value.trim();
+      emotionTags.querySelectorAll('.emotion-tag-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.emotion === currentVal);
+      });
+    });
+  }
 
   geminiModelSelect.addEventListener('change', (e) => {
     state.selectedModel = e.target.value;
@@ -1914,13 +1972,15 @@ async function handleGeneratePoem() {
     return;
   }
 
+  const emotion = poemEmotionInput ? poemEmotionInput.value.trim() : '';
+
   state.isGenerating = true;
   generatePoemBtn.disabled = true;
   emptyState.classList.add('hidden');
   poemContentArea.classList.add('hidden');
   poemActions.classList.add('hidden');
   loadingState.classList.remove('hidden');
-  loadingWordsPreview.textContent = `[선택 시어: ${words.join(' · ')}]`;
+  loadingWordsPreview.textContent = `[선택 시어: ${words.join(' · ')}]${emotion ? ` · 감정: ${emotion}` : ''}`;
 
   try {
     let result = null;
@@ -1934,7 +1994,8 @@ async function handleGeneratePoem() {
           words,
           model: state.selectedModel,
           mood: state.selectedMood,
-          voice_name: state.selectedVoiceName
+          voice_name: state.selectedVoiceName,
+          emotion
         })
       });
 
@@ -1955,7 +2016,7 @@ async function handleGeneratePoem() {
     }
     // 2순위: GitHub Pages 클라이언트 키
     else if (!state.isBackendOnline && state.clientKey && state.clientKey.trim().length > 5) {
-      const clientResult = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey);
+      const clientResult = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey, emotion);
       result = clientResult.poem;
       renderPoem(result, words, true);
       if (clientResult.fallbackOccurred) {
@@ -1967,7 +2028,7 @@ async function handleGeneratePoem() {
     // 3순위: 데모 템플릿
     else {
       await new Promise(r => setTimeout(r, 1100));
-      result = generateDemoPoem(words, state.selectedMood);
+      result = generateDemoPoem(words, state.selectedMood, emotion);
       renderPoem(result, words, false);
       showToast('시원(詩苑) 대표 시풍 데모 모드로 생성되었습니다.');
     }
@@ -1983,7 +2044,7 @@ async function handleGeneratePoem() {
   } catch (error) {
     console.error('시 생성 오류:', error);
     showToast(`오류 발생: ${error.message}`);
-    const fallbackPoem = generateDemoPoem(words, state.selectedMood);
+    const fallbackPoem = generateDemoPoem(words, state.selectedMood, emotion);
     renderPoem(fallbackPoem, words, false);
     updateTtsTuningDisplay();
   } finally {
@@ -2002,8 +2063,13 @@ const CLIENT_FALLBACK_CHAIN = [
   'gemini-flash-latest'
 ];
 
-async function callClientGeminiApi(words, model, mood, apiKey) {
+async function callClientGeminiApi(words, model, mood, apiKey, emotion = '') {
   const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
+  const sanitizedEmotion = String(emotion || '').trim().slice(0, 100);
+
+  // 금지단어(17대 클리셰) 필터링: 사용자가 직접 입력한 5개 단어나 감정에 포함된 경우만 예외 허용
+  const userExplicitText = [...words, sanitizedEmotion].join(' ');
+  const activeForbiddenWords = FORBIDDEN_POETIC_WORDS.filter(w => !userExplicitText.includes(w));
 
   const systemInstruction = `당신은 한국 문학사에 빛나는 명시인들의 시풍과 영혼을 완벽히 체화한 서정시의 대가입니다.
 사용자가 선택한 시인([${poetInfo.name}] - 대표작: '${poetInfo.work}')의 독보적인 문학적 정체성, 특유의 시적 어조, 리듬감, 세계관, 그리고 대표 모티프를 철저히 반영하여, 다섯 단어로 감동적인 한국 현대 서정시를 창작해 주세요.`;
@@ -2011,8 +2077,10 @@ async function callClientGeminiApi(words, model, mood, apiKey) {
   const userPrompt = `
 [창작 대상 시인 및 시풍]
 - 시인: ${poetInfo.name} (대표작: '${poetInfo.work}')
-- 문학적 정서와 스타일: ${poetInfo.desc}
+- 기본 문학적 정서와 스타일: ${poetInfo.desc}
 - 매칭 Google TTS 보이스: ${state.selectedVoiceName}
+${sanitizedEmotion ? `- [사용자가 담고자 하는 시적 감정 및 테마]: "${sanitizedEmotion}"
+- [감정 융합 지침]: 사용자가 지정한 감정("${sanitizedEmotion}")을 [${poetInfo.name}] 시인 특유의 고유한 시적 어조, 시선, 이미지와 유기적으로 결합하여, 시인의 영혼과 목소리로 사용자의 감정을 노래하듯 깊이 있게 빚어내세요.` : ''}
 
 [선택된 다섯 단어]
 1. ${words[0]}
@@ -2021,13 +2089,19 @@ async function callClientGeminiApi(words, model, mood, apiKey) {
 4. ${words[3]}
 5. ${words[4]}
 
-[작품 지침]
+[🚨 시적 클리셰 및 금지단어 배제 지침 (Negative Constraints)]
+${activeForbiddenWords.length > 0 ? `다음 단어들은 지나치게 상투적이고 흔하게 남발되는 클리셰 시어이므로, 사용자가 5개 단어나 감정으로 명시적으로 직접 요청하지 않은 한 시 본문과 제목에서 절대로 사용하지 마세요:
+[${activeForbiddenWords.join(', ')}]
+- 위 금지어 대신 시인의 개성이 담긴 신선하고 독창적인 묘사와 구체적인 사물, 감각적 시어를 활용하세요.` : ''}
+
+[작품 완결성 및 종결 지침 (필수)]
 1. 시의 맨 첫 줄은 '# [시의 제목]' 형식으로 작성하세요.
 2. 3~5개의 연으로 구성하고, 연과 연 사이는 빈 줄로 구분하세요.
 3. 제공된 다섯 단어(${words.join(', ')})를 시 본문 속에 자연스럽고 유려하게 녹여내세요.
 4. 시의 어조, 행간의 호흡, 사용하는 시어의 결이 반드시 [${poetInfo.name}] 시인의 고유한 서정과 정확히 일치하도록 심혈을 기울여 주세요.
-5. 시 본문이 끝난 뒤에는 '---' 구분선을 넣고, 그 아래에 [${poetInfo.name}] 시인의 시선에서 쓴 짤막한 시작노트(2~3문장의 감상과 창작 의도)를 덧붙여 주세요.
-6. 군더더기 인사말은 절대 포함하지 마세요.
+5. [완결성 보장]: 시는 절대로 중간에 문맥이나 행이 끊기지 않고 완전히 끝맺어야 합니다. 마지막 연의 마지막 행까지 시적 여운을 담아 완전한 문장으로 종결하세요.
+6. 시 본문이 완결된 후 반드시 '---' 구분선을 넣고, 그 아래에 [${poetInfo.name}] 시인의 시선에서 쓴 2~3문장의 시작노트(감상과 창작 의도)를 끝까지 온전히 작성하세요.
+7. 군더더기 인사말은 절대 포함하지 마세요.
 `;
 
   const payload = {
@@ -2035,7 +2109,7 @@ async function callClientGeminiApi(words, model, mood, apiKey) {
     generationConfig: {
       temperature: 0.85,
       topP: 0.95,
-      maxOutputTokens: 2048
+      maxOutputTokens: 4096
     }
   };
 
@@ -2100,20 +2174,32 @@ async function callClientGeminiApi(words, model, mood, apiKey) {
   throw new Error(`모든 AI 모델 서버가 혼잡합니다. 잠시 후 다시 시도해 주세요. (${lastError})`);
 }
 
+// 시 텍스트 파서 헬퍼 함수 (강화된 완결성 및 유연한 시작노트 파싱)
 function parsePoem(rawText) {
   let title = '마음의 풍경';
   let bodyLines = [];
   let noteLines = [];
   let isNoteSection = false;
 
-  const lines = rawText.trim().split('\n');
+  const lines = (rawText || '').trim().split('\n');
 
   for (let line of lines) {
     const trimmed = line.trim();
-    if (trimmed.startsWith('# ')) {
-      title = trimmed.replace(/^#\s*/, '').replace(/["'«»]/g, '');
-    } else if (trimmed === '---' || trimmed.startsWith('---')) {
+    if (trimmed.startsWith('# ') || trimmed.startsWith('# [') || /^#+\s+/.test(trimmed)) {
+      title = trimmed.replace(/^#+\s*/, '').replace(/[\[\]"'«»]/g, '').trim();
+    } else if (
+      trimmed === '---' ||
+      trimmed === '***' ||
+      trimmed === '___' ||
+      trimmed.startsWith('---') ||
+      trimmed.startsWith('***') ||
+      /^#*\s*(시작\s*노트|시인의\s*말|시인의\s*노트|작가의\s*말|작가의\s*노트)[:\]]?/i.test(trimmed) ||
+      /^\[(시작\s*노트|시인의\s*말|시인의\s*노트)\]/i.test(trimmed)
+    ) {
       isNoteSection = true;
+      if (trimmed.startsWith('#') || trimmed.startsWith('[') || /^(시작|시인의|작가의)/.test(trimmed)) {
+        continue;
+      }
     } else if (isNoteSection) {
       noteLines.push(line);
     } else {
@@ -2121,70 +2207,83 @@ function parsePoem(rawText) {
     }
   }
 
+  let body = bodyLines.join('\n').trim();
+  let notes = noteLines.join('\n').trim();
+
+  // 만약 시작노트 구분선 없이 본문 끝에 합쳐진 경우 스마트 분리
+  if (!notes) {
+    const noteMatch = body.match(/\n\s*(?:###?\s*|\[)?(?:시작\s*노트|시인의\s*말|시인의\s*노트)[:\]]?\s*([\s\S]+)$/i);
+    if (noteMatch) {
+      notes = noteMatch[1].trim();
+      body = body.slice(0, noteMatch.index).trim();
+    }
+  }
+
   return {
-    title,
-    body: bodyLines.join('\n').trim(),
-    notes: noteLines.join('\n').trim() || '다섯 알의 낱말이 모여 가슴 한 켠에 작은 등불을 켭니다.'
+    title: title || '마음의 풍경',
+    body: body || '바람이 불어오는 곳으로\n조용히 귀를 기울입니다.',
+    notes: notes || '다섯 알의 낱말이 모여 가슴 한 켠에 작은 등불을 켭니다.'
   };
 }
 
 // =========================================================
-// 8. 데모 모드 템플릿 엔진 (33인 시인별 맞춤형 서정)
+// 8. 데모 모드 템플릿 엔진 (33인 시인별 맞춤형 서정 & 감정 결합)
 // =========================================================
-function generateDemoPoem(words, mood) {
+function generateDemoPoem(words, mood, emotion = '') {
   const [w1, w2, w3, w4, w5] = words;
   const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
+  const emotionSuffix = emotion ? ` (${emotion}의 정서를 담아)` : '';
 
   const demoTemplates = {
     yoon_dongju: {
       title: `${w1}과 별빛의 시간`,
-      body: `밤하늘 높이 우러른 ${w1} 아래\n차마 부끄러운 고백들이 흩어지고,\n\n가만히 눈감으면 반짝이는 ${w2},\n홀로 걷는 길목마다 드리운 ${w3}은\n어둠을 헤치고 나아갈 등불이 됩니다.\n\n마른 가슴에 띄운 한 조각 ${w4}를 쥐고\n첫 마음처럼 순결한 ${w5}을 맞이할 때,\n비로소 살아 숨 쉬는 자아를 마주합니다.`,
-      notes: `윤동주의 '하늘과 바람과 별과 시' 속 순결한 별빛처럼, 다섯 낱말(${words.join(', ')})로 깊은 내면의 참회를 엮었습니다.`
+      body: `밤하늘 높이 우러른 ${w1} 아래\n차마 부끄러운 고백들이 흩어지고,\n\n가만히 눈감으면 반짝이는 ${w2},\n홀로 걷는 길섶마다 드리운 ${w3}은\n어둠을 헤치고 나아갈 등불이 됩니다.\n\n마른 가슴에 띄운 한 조각 ${w4}를 쥐고\n첫 마음처럼 순결한 ${w5}을 맞이할 때,\n비로소 살아 있는 자아를 마주합니다.`,
+      notes: `윤동주의 '하늘과 바람과 별과 시' 속 순결한 별빛처럼, 다섯 낱말(${words.join(', ')})로 깊은 내면의 참회를 엮었습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     kim_sowol: {
       title: `${w1}에 띄우는 ${w4}`,
-      body: `먼동이 트기 전 가만히 부르면\n이슬 젖은 창턱에 머무는 ${w1},\n\n물결 위를 스쳐 가던 ${w2}처럼\n흘러간 세월은 잡을 길 없고\n가슴 깊이 고여 든 ${w3}만\n바람 끝에 흔들립니다.\n\n적어두지 못한 ${w4} 한 장\n가슴 한 켠에 접어 묻어두니\n어느새 저 하늘에서 내리는 ${w5},\n시린 계절을 따스히 덮어줍니다.`,
-      notes: `김소월 시인의 '진달래꽃'에 깃든 민조적 7·5조 율격과 애절한 한(恨)으로 다섯 단어를 노래했습니다.`
+      body: `먼동이 트기 전 가만히 부르면\n이슬 젖은 창턱에 머무는 ${w1},\n\n물결 위를 스쳐 가던 ${w2}처럼\n흘러간 세월은 잡을 길 없고\n가슴 깊이 고여 든 ${w3}만\n바람 끝에 흔들립니다.\n\n적어두지 못한 ${w4} 한 장\n가슴 한 켠에 접어 묻어두니\n어느새 저 하늘에서 내리는 ${w5},\n시린 대지를 다정히 덮어줍니다.`,
+      notes: `김소월 시인의 '진달래꽃'에 깃든 민조적 7·5조 율격과 애절한 한(恨)으로 다섯 단어를 노래했습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     na_taeju: {
       title: `자세히 보아야 예쁜 ${w2}`,
       body: `풀잎 끝에 맺힌 ${w1}처럼\n너는 가만히 내게 다가왔다.\n\n햇살 부서지는 강가의 ${w2}보다\n더 눈부신 네 눈망울,\n가만히 불러보는 것만으로 벅찬 ${w3}.\n\n수줍게 건네지 못한 작은 ${w4} 속에\n너를 향한 봄날의 ${w5}이 곱게 피어난다.\n\n너는 나에게 참 좋은 사람이다.`,
-      notes: `나태주 시인의 '풀꽃'처럼 소박하고 다정한 눈길로, 대상을 향한 순수한 사랑의 설렘을 담았습니다.`
+      notes: `나태주 시인의 '풀꽃'처럼 소박하고 다정한 눈길로, 대상을 향한 순수한 사랑의 설렘을 담았습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     park_mokwol: {
       title: `고향 길, ${w1} 언덕에서`,
       body: `굽이굽이 산모롱이 돌아가면\n바람결에 피어나는 푸른 ${w1},\n\n개울가 바위 틈에 어린 ${w2} 따라\n송아지 울음소리 아련한 ${w3},\n\n흙 묻은 손으로 엮은 ${w4}가\n새소리에 실려 날아오르면\n산천 가득 피어오르는 ${w5}처럼\n넉넉한 대지가 품을 내어줍니다.`,
-      notes: `박목월 시인의 '나그네'처럼 향토적 서정과 자연의 소박한 정취를 다섯 시어에 풀어냈습니다.`
+      notes: `박목월 시인의 '나그네'처럼 향토적 서정과 자연의 소박한 정취를 다섯 시어에 풀어냈습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     jung_hoseung: {
       title: `${w5}이 내리는 창가에서`,
-      body: `울지 마라, 외로우니까 사람이다.\n저물어 가는 ${w1} 저편으로\n눈물방울마다 맺힌 ${w2}이 고와서,\n\n끝내 버리지 못한 질긴 ${w3}도\n서로의 등을 감싸 안는 온기가 된다.\n\n부치지 못한 ${w4}를 품에 안고서\n오늘 밤 소리 없이 내리는 ${w5}을 보라,\n상처 없는 영혼이 어디 있으랴.`,
-      notes: `정호승 시인의 '사랑하다가 죽어버려라'처럼, 상처 입은 영혼을 감싸는 온기와 연민을 노래했습니다.`
+      body: `울지 마라, 외로우니까 사람이다.\n저물어 가는 ${w1} 저편으로\n눈물방울마다 맺힌 ${w2}이 고와서,\n\n끝내 버리지 못한 질긴 ${w3}도\n서로의 등을 감싸 안는 다정한 위로가 된다.\n\n부치지 못한 ${w4}를 품에 안고서\n오늘 밤 소리 없이 내리는 ${w5}을 보라,\n상처 없는 영혼이 어디 있으랴.`,
+      notes: `정호승 시인의 '사랑하다가 죽어버려라'처럼, 상처 입은 영혼을 감싸는 인간적 연민과 위로를 노래했습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     kim_chunsoo: {
       title: `${w1}의 이름과 ${w2}`,
       body: `내가 그의 이름을 불러 주기 전에는\n그는 다만 하나의 몸짓에 지나지 않았다.\n\n어둠 속에서 반짝이는 ${w1},\n그 빛을 향해 떨리는 ${w2}의 그림자.\n\n내가 그의 이름을 불러 주었을 때\n비로소 피어난 아득한 ${w3}은,\n너와 나 사이에 건너간 ${w4}가 되어\n어느 눈부신 ${w5}의 언어로 피어났다.`,
-      notes: `김춘수 시인의 '꽃'처럼, 존재의 본질을 인식하고 명명하는 순수 관념의 시학을 담았습니다.`
+      notes: `김춘수 시인의 '꽃'처럼, 존재의 본질을 인식하고 명명하는 순수 관념의 시학을 담았습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     yi_sang: {
       title: `제13인의 ${w1}`,
-      body: `13인의아해가도로로질주하오.\n길은막다른골목이적당하오.\n\n거울속의 ${w1}은왼손잡이오.\n부서지는 ${w2}의파편들,\n분열된내면에서꿈틀거리는 ${w3}.\n\n한장의 ${w4}는불타고있소.\n공포와전율사이로쏟아지는 ${w5},\n그곳에무서운아해와무서워하는아해가있소.`,
-      notes: `이상 시인의 '오감도'처럼 전위적인 파격과 모더니즘의 심연을 다섯 단어로 해체하고 재구성했습니다.`
+      body: `13인의아해가도로로질주하오.\n길은막다른미로가적당하오.\n\n거울속의 ${w1}은왼손잡이오.\n부서지는 ${w2}의파편들,\n분열된내면에서꿈틀거리는 ${w3}.\n\n한장의 ${w4}는불타고있소.\n공포와전율사이로쏟아지는 ${w5},\n그곳에무서운아해와무서워하는아해가있소.`,
+      notes: `이상 시인의 '오감도'처럼 전위적인 파격과 모더니즘의 심연을 다섯 단어로 해체하고 재구성했습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     han_kang: {
       title: `서랍 속의 ${w1}과 저녁`,
-      body: `서랍 속에 저녁을 넣어 두었다.\n문틈으로 흘러나오는 서늘한 ${w1}.\n\n투명한 유리창에 맺힌 ${w2}을 닦아내면\n말해지지 않은 침묵의 ${w3}이 고이고,\n\n손끝으로 쓸어보는 낡은 ${w4} 한 줄에\n차마 흘리지 못한 ${w5}이 촛불처럼 번진다.\n우리는 고통을 통과해 겨우 빛이 된다.`,
-      notes: `한강 시인의 '서랍에 저녁을 넣어 두었다'처럼, 서늘하고 투명한 고통의 심연과 침묵의 빛을 엮었습니다.`
+      body: `서랍 속에 저녁을 넣어 두었다.\n문틈으로 흘러나오는 서늘한 ${w1}.\n\n투명한 유리창에 맺힌 ${w2}을 닦아내면\n말해지지 않은 침묵의 ${w3}이 고이고,\n\n조용히 어루만지는 낡은 ${w4} 한 줄에\n차마 흘리지 못한 ${w5}이 촛불처럼 번져온다.\n우리는 고통을 통과해 겨우 빛이 된다.`,
+      notes: `한강 시인의 '서랍에 저녁을 넣어 두었다'처럼, 서늘하고 투명한 고통의 심연과 침묵의 빛을 엮었습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     park_joon: {
       title: `당신의 ${w1}을 지어다가`,
-      body: `그리움도 오래되면 미열이 된다.\n골목길 가로등 아래 웅크린 ${w1},\n\n물기 묻은 유리창에 비친 ${w2}을 보며\n며칠은 앓았고 며칠은 ${w3}을 삼켰다.\n\n우리가 함께 부치지 못한 ${w4}는\n찬 방바닥 위에 소리 없이 흩어지고,\n첫 새벽 내리는 ${w5}을 이불 삼아\n당신의 이름을 가만히 불러보았다.`,
-      notes: `박준 시인의 '당신의 이름을 지어다가 며칠은 먹었다'처럼, 쓸쓸하고 다정한 일상의 슬픔을 담았습니다.`
+      body: `그리움도 오래되면 미열이 된다.\n어둠 내린 저 길목 아래 웅크린 ${w1},\n\n물기 묻은 유리창에 비친 ${w2}을 보며\n며칠은 앓았고 며칠은 ${w3}을 삼켰다.\n\n우리가 함께 부치지 못한 ${w4}는\n찬 방바닥 위에 소리 없이 흩어지고,\n첫 새벽 내리는 ${w5}을 이불 삼아\n당신의 이름을 가만히 불러보았다.`,
+      notes: `박준 시인의 '당신의 이름을 지어다가 며칠은 먹었다'처럼, 쓸쓸하고 다정한 일상의 슬픔을 담았습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     },
     hwang_inchan: {
       title: `기쁜 ${w1}과 여백`,
-      body: `빛이 드는 방에서 우리는 가만히 앉아 있었다.\n탁자 위에 놓인 작은 ${w1},\n\n창밖으로 번지는 맑은 ${w2}을 보며\n말하지 않아도 충분한 ${w3}을 나누었다.\n\n서랍에 넣어 둔 짧은 ${w4}처럼\n지나가는 계절 끝에 내리는 ${w5},\n아름다운 것은 언제나 조용히 도착한다.`,
-      notes: `황인찬 시인의 '기쁜 이와 함께 나를 나눌 것'처럼, 군더더기 없는 절제와 투명한 여백의 서정을 노래했습니다.`
+      body: `빛이 드는 방에서 우리는 가만히 앉아 있었다.\n탁자 위에 놓인 작은 ${w1},\n\n창밖으로 흐르는 맑은 ${w2}을 보며\n말하지 않아도 충분한 ${w3}을 나누었다.\n\n서랍에 넣어 둔 짧은 ${w4}처럼\n지나가는 세월 끝에 내리는 ${w5},\n아름다운 것은 언제나 조용히 도착한다.`,
+      notes: `황인찬 시인의 '기쁜 이와 함께 나를 나눌 것'처럼, 군더더기 없는 절제와 투명한 여백의 서정을 노래했습니다.${emotion ? ` [반영 감정: ${emotion}]` : ''}`
     }
   };
 
@@ -2194,9 +2293,9 @@ function generateDemoPoem(words, mood) {
 
   // 그 외 33인 시인들을 위한 정밀 맞춤 생성기
   return {
-    title: `${poetInfo.name} 풍의 ${w1}과 ${w5}`,
-    body: `바람이 머물다 가는 길목에서\n가만히 흔들리는 ${w1},\n\n지나간 시간의 잔물결 위로\n아스라이 부서지는 ${w2}의 기억들.\n마음의 심연에 고여 든 ${w3}은\n어둠을 밝히는 한 줄기 빛이 된다.\n\n적어두지 못한 ${w4}를 마음에 품고\n다시금 고요히 대지에 내리는 ${w5},\n생의 침묵 속에 가장 순결한 언어로 피어난다.`,
-    notes: `${poetInfo.name} 시인의 대표작 '${poetInfo.work}'의 시풍(${poetInfo.desc})을 기리며, 다섯 단어(${words.join(', ')})로 깊은 서정을 길어 올렸습니다.`
+    title: `${poetInfo.name} 풍의 ${w1}과 ${w5}${emotionSuffix}`,
+    body: `바람이 머물다 가는 자리에서\n가만히 흔들리는 ${w1},\n\n지나간 시간의 잔물결 위로\n아스라이 부서지는 ${w2}의 기억들.\n마음의 심연에 고여 든 ${w3}은\n어둠을 밝히는 한 줄기 빛이 된다.\n\n적어두지 못한 ${w4}를 마음에 품고\n다시금 고요히 대지에 내리는 ${w5},\n생의 침묵 속에 가장 순결한 언어로 피어난다.`,
+    notes: `${poetInfo.name} 시인의 대표작 '${poetInfo.work}'의 시풍(${poetInfo.desc})을 기리며, 다섯 단어(${words.join(', ')})로 깊은 서정을 길어 올렸습니다.${emotion ? ` [부여된 감정: ${emotion}]` : ''}`
   };
 }
 

@@ -432,6 +432,78 @@ body {
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
 
+/* 감정 & 정서 입력 필드 및 태그 스타일 (Ver-5) */
+.emotion-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.custom-input.emotion-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: #fbfaf7;
+  border: 1.5px solid #ded5c2;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+.custom-input.emotion-input:focus {
+  outline: none;
+  background-color: #ffffff;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+}
+
+.emotion-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.emotion-tag-btn {
+  background: #f4f0e6;
+  border: 1px solid #dcd3c1;
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  color: #57534e;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.emotion-tag-btn:hover {
+  background: #ebe4d2;
+  border-color: #9a9284;
+  color: #1c1917;
+  transform: translateY(-1px);
+}
+
+.emotion-tag-btn.active {
+  background: #7c3aed;
+  border-color: #6d28d9;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.28);
+}
+
+/* 추천 단어 채우기 펄스 애니메이션 */
+@keyframes wordInputPulse {
+  0% { transform: scale(1); background-color: #fbfaf7; }
+  50% { transform: scale(1.02); background-color: #fef9c3; border-color: #ca8a04; }
+  100% { transform: scale(1); background-color: #fbfaf7; }
+}
+
+.word-input.input-pulse {
+  animation: wordInputPulse 0.45s ease;
+}
+
+
 /* 생성 실행 버튼 */
 .action-block {
   margin-top: 10px;

@@ -25,7 +25,7 @@
       <div class="brand">
         <div class="brand-seal">詩</div>
         <div class="brand-text">
-          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-4</span></h1>
+          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-5</span></h1>
           <p class="brand-subtitle">AI 한국 서정시 창작소 · 백엔드 보안 운영</p>
         </div>
       </div>
@@ -161,6 +161,27 @@
                     <option value="kang_woogeun">강우근 · 개미 한마리를 실수로 밟을 뻔한 날 (작고 여린 생명을 향한 다정한 응시)</option>
                   </optgroup>
                 </select>
+              </div>
+            </div>
+
+            <!-- 시적 감정 및 정서 직접 입력 (시인풍과 융합) -->
+            <div class="option-group">
+              <label for="poemEmotionInput" class="option-label">
+                <span class="label-with-icon">💭 시에 담을 감정 & 정서 (선택 입력)</span>
+                <span class="version-tip" style="background: #ede9fe; color: #5b21b6;">시인풍과 예술적 융합</span>
+              </label>
+              <div class="emotion-input-wrapper">
+                <input type="text" id="poemEmotionInput" class="custom-input emotion-input" 
+                       placeholder="예: 비 내리는 늦은 밤의 쓸쓸함, 따뜻한 위로, 아련한 그리움, 첫사랑의 설렘..." 
+                       maxlength="60">
+                <div class="emotion-tags" id="emotionTags">
+                  <button type="button" class="emotion-tag-btn" data-emotion="아련한 그리움">아련한 그리움</button>
+                  <button type="button" class="emotion-tag-btn" data-emotion="따뜻한 위로">따뜻한 위로</button>
+                  <button type="button" class="emotion-tag-btn" data-emotion="쓸쓸함">쓸쓸함</button>
+                  <button type="button" class="emotion-tag-btn" data-emotion="새벽의 고요">새벽의 고요</button>
+                  <button type="button" class="emotion-tag-btn" data-emotion="설렘과 희망">설렘과 희망</button>
+                  <button type="button" class="emotion-tag-btn" data-emotion="초연한 관조">초연한 관조</button>
+                </div>
               </div>
             </div>
           </div>
@@ -492,7 +513,7 @@
         <div class="security-checklist">
           <h4>🛡️ 정보보안 지침 준수 & 시스템 정보</h4>
           <ul>
-            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-4</span> (BGM 정지 기능 · 시 낭송 행 단위 하이라이트 · TTS 별표 스킵 · 트래픽 과부하 방어)</li>
+            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-5</span> (17대 클리셰 금지단어 배제 · 한국 대표 시어 159선 무작위 채우기 · 감정 입력 & 시인풍 융합 · 완결성 보장 엔진)</li>
             <li>✅ <strong>Server-to-Server 통신</strong>: 백엔드 환경에서는 구글 API를 비공개 호출</li>
             <li>✅ <strong>환경변수 격리 (.env)</strong>: 소스 코드에 키를 하드코딩하지 않고 환경변수로 분리</li>
             <li>✅ <strong>Git 유출 차단 (.gitignore)</strong>: 깃허브 커밋 시 .env 파일 원천 배제</li>
