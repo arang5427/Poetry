@@ -579,6 +579,18 @@ body {
   color: var(--accent-ink);
 }
 
+.bgm-btn.stop-btn {
+  background: #ffffff;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.bgm-btn.stop-btn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
 .bgm-player-sub {
   display: flex;
   align-items: center;
