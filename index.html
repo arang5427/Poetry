@@ -25,7 +25,7 @@
       <div class="brand">
         <div class="brand-seal">詩</div>
         <div class="brand-text">
-          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-7</span></h1>
+          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-8</span></h1>
           <p class="brand-subtitle">AI 한국 서정시 창작소 · 백엔드 보안 운영</p>
         </div>
       </div>
@@ -55,85 +55,120 @@
               <span class="step-badge">1</span>
               <h2>다섯 가지 시어(詩語) 입력</h2>
             </div>
-            <div class="step-actions">
-              <button id="photoUploadTriggerBtn" class="btn-text-action photo-action-btn" type="button" title="사진을 업로드하여 시어 5개 자동 추출">
-                📷 사진 분석
-              </button>
+            <span class="step-sub-badge">직접 입력 또는 사진 분석</span>
+          </div>
+
+          <!-- [신규] 입력 방식 선택 메뉴탭 (Tab Navigation) -->
+          <div class="input-mode-tabs" role="tablist">
+            <button type="button" class="mode-tab-btn active" id="tabDirectInputBtn" role="tab" aria-selected="true">
+              <span class="tab-icon">✍️</span>
+              <span class="tab-label">직접 시어 입력</span>
+            </button>
+            <button type="button" class="mode-tab-btn" id="tabPhotoAnalysisBtn" role="tab" aria-selected="false">
+              <span class="tab-icon">📷</span>
+              <span class="tab-label">사진업로드 및 분석</span>
+              <span class="tab-badge-new">자동 분석</span>
+            </button>
+          </div>
+
+          <!-- 탭 1: 직접 시어 입력 패널 -->
+          <div id="panelDirectInput" class="tab-panel active">
+            <div class="panel-header-action">
+              <p class="guide-desc">마음에 떠오르는 단어 5개를 직접 넣거나, 추천 단어를 채워보세요.</p>
               <button id="randomWordsBtn" class="btn-text-action" type="button" title="한국 대표 시어 159선 자동 추천">
                 🎲 추천 단어 채우기
               </button>
             </div>
-          </div>
-          <p class="guide-desc">마음에 떠오르는 단어 5개를 직접 넣거나, 사진을 분석하여 시의 씨앗을 발견하세요.</p>
 
-          <!-- 사진 업로드 및 분석 영역 (Ver-7 신규) -->
-          <div id="photoAnalysisArea" class="photo-analysis-area">
-            <!-- 숨김 파일 인풋 -->
-            <input type="file" id="photoFileInput" accept="image/*" class="hidden">
-
-            <!-- 드롭존 -->
-            <div id="photoDropZone" class="photo-drop-zone">
-              <div class="photo-drop-content">
-                <span class="photo-drop-icon">📷</span>
-                <div class="photo-drop-text-group">
-                  <p class="photo-drop-primary">사진을 이곳에 끌어다 놓거나 <strong>클릭하여 업로드</strong>하세요</p>
-                  <p class="photo-drop-secondary">AI Vision이 사진의 색채와 정서를 분석하여 시어 5개를 자동 추출합니다</p>
-                </div>
+            <div class="words-inputs-grid">
+              <div class="input-field">
+                <label for="word1" class="field-label">단어 1</label>
+                <input type="text" id="word1" class="word-input" placeholder="예: 밤바다" maxlength="15">
               </div>
-            </div>
-
-            <!-- 사진 분석 중 로딩 표시 -->
-            <div id="photoAnalyzingState" class="photo-analyzing-state hidden">
-              <div class="photo-spinner"></div>
-              <p class="photo-analyzing-text">사진의 색채와 서정적 정경을 분석하는 중입니다...</p>
-            </div>
-
-            <!-- 분석 완료 카드 (미리보기 & 50자 이내 설명란) -->
-            <div id="photoPreviewContainer" class="photo-preview-container hidden">
-              <div class="photo-thumb-col">
-                <div class="photo-thumb-frame">
-                  <img id="photoThumbnail" src="" alt="분석된 사진 미리보기" class="photo-thumbnail">
-                  <button type="button" id="photoRemoveBtn" class="photo-remove-btn" title="사진 제거">✕</button>
-                </div>
+              <div class="input-field">
+                <label for="word2" class="field-label">단어 2</label>
+                <input type="text" id="word2" class="word-input" placeholder="예: 윤슬" maxlength="15">
               </div>
-              <div class="photo-desc-col">
-                <div class="photo-desc-header">
-                  <span class="photo-desc-badge">📷 사진 감성 분석</span>
-                  <span id="photoDescCharCount" class="photo-desc-counter">0/50자</span>
-                </div>
-                <p id="photoDescriptionText" class="photo-description-text"></p>
-                <div class="photo-desc-actions">
-                  <button type="button" id="applyPhotoDescToEmotionBtn" class="btn-micro-action" title="이 분석 설명을 2단계 시 감정 입력창에 반영합니다">
-                    💭 시 감정(느낌)에 반영하기
-                  </button>
-                  <button type="button" id="reuploadPhotoBtn" class="btn-micro-action secondary" title="다른 사진으로 교체 분석">
-                    🔄 다른 사진 분석
-                  </button>
-                </div>
+              <div class="input-field">
+                <label for="word3" class="field-label">단어 3</label>
+                <input type="text" id="word3" class="word-input" placeholder="예: 그리움" maxlength="15">
+              </div>
+              <div class="input-field">
+                <label for="word4" class="field-label">단어 4</label>
+                <input type="text" id="word4" class="word-input" placeholder="예: 편지" maxlength="15">
+              </div>
+              <div class="input-field full-width">
+                <label for="word5" class="field-label">단어 5</label>
+                <input type="text" id="word5" class="word-input" placeholder="예: 첫눈" maxlength="15">
               </div>
             </div>
           </div>
-          
-          <div class="words-inputs-grid">
-            <div class="input-field">
-              <label for="word1" class="field-label">단어 1</label>
-              <input type="text" id="word1" class="word-input" placeholder="예: 밤바다" maxlength="15">
+
+          <!-- 탭 2: 사진업로드 및 분석 패널 -->
+          <div id="panelPhotoAnalysis" class="tab-panel hidden">
+            <!-- 1. 사진업로드 박스 -->
+            <div class="photo-upload-box-wrap">
+              <input type="file" id="photoFileInput" accept="image/*" class="hidden">
+              <div id="photoDropZone" class="photo-drop-zone">
+                <div class="photo-drop-content">
+                  <span class="photo-drop-icon">📷</span>
+                  <div class="photo-drop-text-group">
+                    <p class="photo-drop-primary">사진을 이곳에 끌어다 놓거나 <strong>클릭하여 업로드</strong>하세요</p>
+                    <p class="photo-drop-secondary">사진을 올리면 AI가 즉시 감상하여 추천 시어 5개를 자동 추출·입력합니다</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 사진 분석 중 로딩 표시 -->
+              <div id="photoAnalyzingState" class="photo-analyzing-state hidden">
+                <div class="photo-spinner"></div>
+                <div class="photo-analyzing-texts">
+                  <p class="photo-analyzing-title">사진의 색채와 정서를 분석 중입니다...</p>
+                  <p class="photo-analyzing-sub">시어 5개 추출 및 50자 감성 해설 생성 중</p>
+                </div>
+              </div>
             </div>
-            <div class="input-field">
-              <label for="word2" class="field-label">단어 2</label>
-              <input type="text" id="word2" class="word-input" placeholder="예: 윤슬" maxlength="15">
-            </div>
-            <div class="input-field">
-              <label for="word3" class="field-label">단어 3</label>
-              <input type="text" id="word3" class="word-input" placeholder="예: 그리움" maxlength="15">
-            </div>
-            <div class="input-field">
-              <label for="word4" class="field-label">단어 4</label>
-              <input type="text" id="word4" class="word-input" placeholder="예: 편지" maxlength="15">
-            </div>
-            <div class="input-field full-width">
-              <label for="word5" class="field-label">단어 5</label>
-              <input type="text" id="word5" class="word-input" placeholder="예: 첫눈" maxlength="15">
+
+            <!-- 2. 사진 표시창 (사진업로드 후 노출되는 전용 디스플레이 윈도우) -->
+            <div id="photoDisplayWindow" class="photo-display-window hidden">
+              <div class="photo-viewer-card">
+                <div class="photo-display-frame">
+                  <img id="photoDisplayImg" src="" alt="업로드된 사진 표시창" class="photo-display-img">
+                  <button type="button" id="photoDisplayRemoveBtn" class="photo-display-remove-btn" title="사진 삭제">✕</button>
+                </div>
+                <div class="photo-analysis-info-card">
+                  <div class="analysis-card-header">
+                    <span class="analysis-status-badge">✨ 사진 분석 완료</span>
+                    <span id="photoDescCharCount" class="char-counter-badge">0/50자</span>
+                  </div>
+                  
+                  <!-- 50자 이내 사진분석 설명란 -->
+                  <div class="photo-desc-box">
+                    <label class="desc-box-label">📷 사진 감성 설명 (50자 이내)</label>
+                    <p id="photoDescriptionText" class="photo-description-text"></p>
+                  </div>
+
+                  <!-- 추출된 추천 시어 5개 표시 칩 -->
+                  <div class="extracted-words-box">
+                    <label class="extracted-label">✨ 자동 추출된 추천 시어 5개 (입력 완료됨)</label>
+                    <div id="extractedWordsChips" class="extracted-words-chips">
+                      <!-- 5개 칩 동적 렌더링 -->
+                    </div>
+                  </div>
+
+                  <div class="photo-viewer-actions">
+                    <button type="button" id="applyPhotoDescToEmotionBtn" class="btn-micro-action active">
+                      💭 시 감정(느낌)에 반영하기
+                    </button>
+                    <button type="button" id="reuploadPhotoBtn" class="btn-micro-action secondary">
+                      🔄 다른 사진 분석
+                    </button>
+                    <button type="button" id="switchToDirectTabBtn" class="btn-micro-action text-btn">
+                      ✍️ 입력된 시어 확인하기 &rarr;
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -583,7 +618,7 @@
         <div class="security-checklist">
           <h4>🛡️ 정보보안 지침 준수 & 시스템 정보</h4>
           <ul>
-            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-7</span> (사진 분석 시어 5개 자동 추출 & 50자 이내 설명란 · PDF 4대 문헌 운율·시인풍·감정 융합 · 17대 클리셰 금지어 배제)</li>
+            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-8</span> ("사진업로드및분석" 메뉴탭 · 사진업로드 박스 & 사진 표시창 · 시어 5개 자동 입력 · PDF 운율 융합)</li>
             <li>✅ <strong>Server-to-Server 통신</strong>: 백엔드 환경에서는 구글 API를 비공개 호출</li>
             <li>✅ <strong>환경변수 격리 (.env)</strong>: 소스 코드에 키를 하드코딩하지 않고 환경변수로 분리</li>
             <li>✅ <strong>Git 유출 차단 (.gitignore)</strong>: 깃허브 커밋 시 .env 파일 원천 배제</li>

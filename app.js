@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-7';
+const APP_VERSION = 'Ver-8';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -27,7 +27,7 @@ const state = {
   currentPoem: null,
   isGenerating: false,
 
-  // 사진 분석 상태 (Ver-7)
+  // 사진 분석 상태 (Ver-8)
   isAnalyzingPhoto: false,
   uploadedPhotoBase64: null,
   uploadedPhotoMime: 'image/jpeg',
@@ -931,7 +931,12 @@ const poemProsodySelect = document.getElementById('poemProsodySelect');
 const generatePoemBtn = document.getElementById('generatePoemBtn');
 const randomWordsBtn = document.getElementById('randomWordsBtn');
 
-// 사진 분석 요소 (Ver-7)
+// 입력 방식 메뉴탭 및 사진 분석 요소 (Ver-8)
+const tabDirectInputBtn = document.getElementById('tabDirectInputBtn');
+const tabPhotoAnalysisBtn = document.getElementById('tabPhotoAnalysisBtn');
+const panelDirectInput = document.getElementById('panelDirectInput');
+const panelPhotoAnalysis = document.getElementById('panelPhotoAnalysis');
+
 const photoUploadTriggerBtn = document.getElementById('photoUploadTriggerBtn');
 const photoFileInput = document.getElementById('photoFileInput');
 const photoDropZone = document.getElementById('photoDropZone');
@@ -939,10 +944,15 @@ const photoAnalyzingState = document.getElementById('photoAnalyzingState');
 const photoPreviewContainer = document.getElementById('photoPreviewContainer');
 const photoThumbnail = document.getElementById('photoThumbnail');
 const photoRemoveBtn = document.getElementById('photoRemoveBtn');
+const photoDisplayWindow = document.getElementById('photoDisplayWindow');
+const photoDisplayImg = document.getElementById('photoDisplayImg');
+const photoDisplayRemoveBtn = document.getElementById('photoDisplayRemoveBtn');
 const photoDescriptionText = document.getElementById('photoDescriptionText');
 const photoDescCharCount = document.getElementById('photoDescCharCount');
+const extractedWordsChips = document.getElementById('extractedWordsChips');
 const applyPhotoDescToEmotionBtn = document.getElementById('applyPhotoDescToEmotionBtn');
 const reuploadPhotoBtn = document.getElementById('reuploadPhotoBtn');
+const switchToDirectTabBtn = document.getElementById('switchToDirectTabBtn');
 
 // 시 전시 영역
 const emptyState = document.getElementById('emptyState');
@@ -2007,14 +2017,58 @@ function setupEventListeners() {
     if (e.target === apiModal) apiModal.classList.add('hidden');
   });
 
-  // [Ver-7] 사진 분석 이벤트 리스너 등록
+  // [Ver-8] 사진 분석 및 메뉴탭 이벤트 리스너 등록
   setupPhotoAnalysisListeners();
 }
 
 // =========================================================
-// 6-1. [Ver-7] 사진 분석(Vision) 및 시어 5개 자동 추출 엔진
+// 6-1. [Ver-8] 사진업로드 및 분석(Vision), 메뉴탭 전환 & 시어 5개 자동 추출
 // =========================================================
 function setupPhotoAnalysisListeners() {
+  // 1. 입력 방식 메뉴탭(Tab Navigation) 전환 함수
+  function switchInputTab(mode) {
+    if (mode === 'direct') {
+      if (tabDirectInputBtn) {
+        tabDirectInputBtn.classList.add('active');
+        tabDirectInputBtn.setAttribute('aria-selected', 'true');
+      }
+      if (tabPhotoAnalysisBtn) {
+        tabPhotoAnalysisBtn.classList.remove('active');
+        tabPhotoAnalysisBtn.setAttribute('aria-selected', 'false');
+      }
+      if (panelDirectInput) panelDirectInput.classList.remove('hidden');
+      if (panelPhotoAnalysis) panelPhotoAnalysis.classList.add('hidden');
+    } else if (mode === 'photo') {
+      if (tabPhotoAnalysisBtn) {
+        tabPhotoAnalysisBtn.classList.add('active');
+        tabPhotoAnalysisBtn.setAttribute('aria-selected', 'true');
+      }
+      if (tabDirectInputBtn) {
+        tabDirectInputBtn.classList.remove('active');
+        tabDirectInputBtn.setAttribute('aria-selected', 'false');
+      }
+      if (panelPhotoAnalysis) panelPhotoAnalysis.classList.remove('hidden');
+      if (panelDirectInput) panelDirectInput.classList.add('hidden');
+    }
+  }
+
+  // 메뉴탭 클릭 이벤트
+  if (tabDirectInputBtn) {
+    tabDirectInputBtn.addEventListener('click', () => switchInputTab('direct'));
+  }
+  if (tabPhotoAnalysisBtn) {
+    tabPhotoAnalysisBtn.addEventListener('click', () => switchInputTab('photo'));
+  }
+
+  // 사진 표시창 내 "직접 입력 탭으로 이동" 버튼
+  if (switchToDirectTabBtn) {
+    switchToDirectTabBtn.addEventListener('click', () => {
+      switchInputTab('direct');
+      if (wordInputs[0]) wordInputs[0].focus();
+    });
+  }
+
+  // 2. 사진 업로드 트리거 및 재업로드 버튼
   if (photoUploadTriggerBtn && photoFileInput) {
     photoUploadTriggerBtn.addEventListener('click', () => {
       photoFileInput.click();
@@ -2027,12 +2081,12 @@ function setupPhotoAnalysisListeners() {
     });
   }
 
+  // 3. 사진 드롭존(Drop Zone) 클릭 및 드래그 앤 드롭
   if (photoDropZone && photoFileInput) {
     photoDropZone.addEventListener('click', () => {
       photoFileInput.click();
     });
 
-    // 드래그 앤 드롭 이벤트
     ['dragenter', 'dragover'].forEach(eventName => {
       photoDropZone.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -2057,6 +2111,7 @@ function setupPhotoAnalysisListeners() {
     });
   }
 
+  // 파일 선택기 변경 이벤트
   if (photoFileInput) {
     photoFileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
@@ -2065,10 +2120,15 @@ function setupPhotoAnalysisListeners() {
     });
   }
 
+  // 사진 삭제 버튼 (표시창 내부 삭제 버튼 및 하위 호환)
+  if (photoDisplayRemoveBtn) {
+    photoDisplayRemoveBtn.addEventListener('click', clearUploadedPhoto);
+  }
   if (photoRemoveBtn) {
     photoRemoveBtn.addEventListener('click', clearUploadedPhoto);
   }
 
+  // 사진 감성 설명 -> 시 감정(느낌) 입력창 반영
   if (applyPhotoDescToEmotionBtn && poemEmotionInput) {
     applyPhotoDescToEmotionBtn.addEventListener('click', () => {
       if (state.photoDescription) {
@@ -2126,8 +2186,9 @@ async function handlePhotoFile(file) {
   }
 
   try {
-    // 1. UI 전환: 드롭존 숨기고 분석 스피너 노출
+    // 1. UI 전환: 드롭존 및 표시창 숨기고 분석 스피너 노출
     if (photoDropZone) photoDropZone.classList.add('hidden');
+    if (photoDisplayWindow) photoDisplayWindow.classList.add('hidden');
     if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
     if (photoAnalyzingState) photoAnalyzingState.classList.remove('hidden');
     state.isAnalyzingPhoto = true;
@@ -2187,12 +2248,24 @@ async function handlePhotoFile(file) {
       }
     });
 
-    // 썸네일 및 50자 이내 설명란 렌더링
+    // 사진 표시창 이미지 바인딩 및 50자 이내 설명란 렌더링
+    if (photoDisplayImg) photoDisplayImg.src = base64Data;
     if (photoThumbnail) photoThumbnail.src = base64Data;
     if (photoDescriptionText) photoDescriptionText.textContent = description;
     if (photoDescCharCount) photoDescCharCount.textContent = `${description.length}/50자`;
 
+    // 추천 시어 5개 칩 렌더링
+    if (extractedWordsChips) {
+      extractedWordsChips.innerHTML = words.map((w, i) => `
+        <span class="extracted-word-chip" title="단어 ${i + 1} 자동 입력됨">
+          <span class="chip-num">${i + 1}</span>
+          <span class="chip-text">${escapeHtml(w)}</span>
+        </span>
+      `).join('');
+    }
+
     if (photoAnalyzingState) photoAnalyzingState.classList.add('hidden');
+    if (photoDisplayWindow) photoDisplayWindow.classList.remove('hidden');
     if (photoPreviewContainer) photoPreviewContainer.classList.remove('hidden');
     showToast(`사진 분석 완료! 시어 5개가 자동 입력되었습니다 📷✨`);
 
@@ -2326,8 +2399,12 @@ function clearUploadedPhoto() {
   state.uploadedPhotoBase64 = null;
   state.uploadedPhotoMime = 'image/jpeg';
   state.photoDescription = '';
+  if (photoDisplayImg) photoDisplayImg.src = '';
   if (photoThumbnail) photoThumbnail.src = '';
   if (photoDescriptionText) photoDescriptionText.textContent = '';
+  if (photoDescCharCount) photoDescCharCount.textContent = '0/50자';
+  if (extractedWordsChips) extractedWordsChips.innerHTML = '';
+  if (photoDisplayWindow) photoDisplayWindow.classList.add('hidden');
   if (photoPreviewContainer) photoPreviewContainer.classList.add('hidden');
   if (photoAnalyzingState) photoAnalyzingState.classList.add('hidden');
   if (photoDropZone) photoDropZone.classList.remove('hidden');
