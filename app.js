@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-5';
+const APP_VERSION = 'Ver-6';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -23,6 +23,7 @@ const state = {
   selectedModel: 'gemini-3.8-flash',
   selectedMood: 'yoon_dongju',
   selectedVoiceName: 'Iapetus',
+  selectedProsody: 'auto',
   currentPoem: null,
   isGenerating: false,
 
@@ -881,6 +882,30 @@ const FORBIDDEN_POETIC_WORDS = [
   '손끝', '가로등', '박자', '쪽으로', '번져', '골목', '발끝', '볕살이', '괜히'
 ];
 
+// PDF 4대 문헌 학습 기반 시적 운율 & 리듬 스타일 정의 (Ver-6)
+const PROSODY_STYLES = {
+  auto: {
+    name: '자동 최적화 (시인풍·감정 맞춤형)',
+    desc: '선택한 시인의 문학적 정체성과 사용자의 감정 표현에 가장 부합하는 최적의 운율과 호흡을 자동으로 조율합니다.'
+  },
+  folk_rhythm: {
+    name: '애틋한 7·5조 민요풍 (3음보 서정)',
+    desc: '전통 민요와 김소월 시학에서 이어지는 7·5조 음수율과 3음보의 아련한 가락. 이별의 한과 애절한 그리움을 노래하기에 최적화된 리듬.'
+  },
+  classical_meter: {
+    name: '단정한 3·4 / 4·4조 가사풍 (4음보 정통 기품)',
+    desc: '전통 가사와 시조의 안정된 3·4조 및 4·4조 음수율과 4음보의 단아한 균형미. 기품 있고 차분한 자아 성찰과 삶의 깊이를 표현.'
+  },
+  modern_free: {
+    name: '감각적 현대 자유율 (긴 행과 짧은 행의 교차)',
+    desc: '기계적 일정한 행 길이를 탈피하고, 파도치듯 긴 호흡과 짧은 호흡을 유기적으로 교차시키며 여백과 여운을 극대화한 현대적 호흡.'
+  },
+  meditative_prose: {
+    name: '깊은 사유의 명상적 율격 (유장한 내재율)',
+    desc: '강물처럼 깊고 유장하게 흐르는 긴 호흡의 서정 산문율. 내면의 독백과 침묵의 호흡이 어우러진 깊은 사유의 미학.'
+  }
+};
+
 // =========================================================
 // 2. DOM 요소 참조
 // =========================================================
@@ -896,6 +921,7 @@ const geminiModelSelect = document.getElementById('geminiModelSelect');
 const poemMoodSelect = document.getElementById('poemMoodSelect');
 const poemEmotionInput = document.getElementById('poemEmotionInput');
 const emotionTags = document.getElementById('emotionTags');
+const poemProsodySelect = document.getElementById('poemProsodySelect');
 const generatePoemBtn = document.getElementById('generatePoemBtn');
 const randomWordsBtn = document.getElementById('randomWordsBtn');
 
@@ -1894,6 +1920,14 @@ function setupEventListeners() {
     state.selectedModel = e.target.value;
   });
 
+  if (poemProsodySelect) {
+    poemProsodySelect.addEventListener('change', (e) => {
+      state.selectedProsody = e.target.value;
+      const pInfo = PROSODY_STYLES[state.selectedProsody] || PROSODY_STYLES.auto;
+      showToast(`운율 튜닝: ${pInfo.name} 🎵`);
+    });
+  }
+
   // 서정시 짓기 버튼
   generatePoemBtn.addEventListener('click', handleGeneratePoem);
 
@@ -1973,6 +2007,7 @@ async function handleGeneratePoem() {
   }
 
   const emotion = poemEmotionInput ? poemEmotionInput.value.trim() : '';
+  const prosodyStyle = poemProsodySelect ? poemProsodySelect.value : (state.selectedProsody || 'auto');
 
   state.isGenerating = true;
   generatePoemBtn.disabled = true;
@@ -1980,7 +2015,8 @@ async function handleGeneratePoem() {
   poemContentArea.classList.add('hidden');
   poemActions.classList.add('hidden');
   loadingState.classList.remove('hidden');
-  loadingWordsPreview.textContent = `[선택 시어: ${words.join(' · ')}]${emotion ? ` · 감정: ${emotion}` : ''}`;
+  const prosodyDisplayName = PROSODY_STYLES[prosodyStyle]?.name || '자동 맞춤';
+  loadingWordsPreview.textContent = `[선택 시어: ${words.join(' · ')}]${emotion ? ` · 감정: ${emotion}` : ''} · 운율: ${prosodyDisplayName}`;
 
   try {
     let result = null;
@@ -1995,7 +2031,8 @@ async function handleGeneratePoem() {
           model: state.selectedModel,
           mood: state.selectedMood,
           voice_name: state.selectedVoiceName,
-          emotion
+          emotion,
+          prosody_style: prosodyStyle
         })
       });
 
@@ -2006,29 +2043,32 @@ async function handleGeneratePoem() {
 
       const data = await response.json();
       result = data.poem;
+      if (data.prosody_style && !result.prosody_style) {
+        result.prosody_style = data.prosody_style;
+      }
       renderPoem(result, words, true);
 
       if (data.fallbackOccurred) {
         showToast(`🔒 서버 혼잡을 극복하고 [${data.model}] 모델로 시가 안전하게 창작되었습니다 ✨`);
       } else {
-        showToast('🔒 보안 백엔드를 통해 안전하게 시가 창작되었습니다.');
+        showToast('🔒 보안 백엔드 (PDF 운율·시인풍·감정 융합)로 시가 창작되었습니다 ✨');
       }
     }
     // 2순위: GitHub Pages 클라이언트 키
     else if (!state.isBackendOnline && state.clientKey && state.clientKey.trim().length > 5) {
-      const clientResult = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey, emotion);
+      const clientResult = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey, emotion, prosodyStyle);
       result = clientResult.poem;
       renderPoem(result, words, true);
       if (clientResult.fallbackOccurred) {
         showToast(`Gemini AI (${clientResult.usedModel})로 서버 혼잡을 자동 극복하고 시를 창작했습니다 ✨`);
       } else {
-        showToast('Google Gemini AI를 통해 실시간 시가 창작되었습니다 ✨');
+        showToast('Google Gemini AI (PDF 운율 융합)를 통해 실시간 시가 창작되었습니다 ✨');
       }
     }
     // 3순위: 데모 템플릿
     else {
       await new Promise(r => setTimeout(r, 1100));
-      result = generateDemoPoem(words, state.selectedMood, emotion);
+      result = generateDemoPoem(words, state.selectedMood, emotion, prosodyStyle);
       renderPoem(result, words, false);
       showToast('시원(詩苑) 대표 시풍 데모 모드로 생성되었습니다.');
     }
@@ -2044,7 +2084,7 @@ async function handleGeneratePoem() {
   } catch (error) {
     console.error('시 생성 오류:', error);
     showToast(`오류 발생: ${error.message}`);
-    const fallbackPoem = generateDemoPoem(words, state.selectedMood, emotion);
+    const fallbackPoem = generateDemoPoem(words, state.selectedMood, emotion, prosodyStyle);
     renderPoem(fallbackPoem, words, false);
     updateTtsTuningDisplay();
   } finally {
@@ -2063,16 +2103,54 @@ const CLIENT_FALLBACK_CHAIN = [
   'gemini-flash-latest'
 ];
 
-async function callClientGeminiApi(words, model, mood, apiKey, emotion = '') {
+async function callClientGeminiApi(words, model, mood, apiKey, emotion = '', prosodyStyle = 'auto') {
   const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
   const sanitizedEmotion = String(emotion || '').trim().slice(0, 100);
+  const prosodyInfo = PROSODY_STYLES[prosodyStyle] || PROSODY_STYLES.auto;
+
+  // 운율 스타일별 PDF 4대 문헌 학습 지침 생성
+  let prosodyGuideline = '';
+  switch (prosodyStyle) {
+    case 'folk_rhythm':
+      prosodyGuideline = `
+[PDF 문헌 학습 운율 지침: 애틋한 7·5조 민요풍 (3음보 서정)]
+- 율격 구조: 각 행을 3음보(예: '나 보기가 역겨워 / 가실 때에는 / 말없이 고이 보내 드리오리다')의 아련한 민요조 가락으로 전개하세요.
+- 음수율: 전통 민요 및 김소월 시학에서 내려오는 7·5조(7글자·5글자) 음수율을 주조로 삼으세요.
+- 음운 및 각운: 각 연의 종결 어미나 모음을 부드러운 유음('ㄹ') 및 비음('ㅁ', 'ㄴ', 'ㅇ')으로 조율하여 노래하듯 읊조려지는 음악성을 부여하세요.`;
+      break;
+    case 'classical_meter':
+      prosodyGuideline = `
+[PDF 문헌 학습 운율 지침: 단정한 3·4 / 4·4조 가사풍 (4음보 정통 기품)]
+- 율격 구조: 각 행을 단아하고 균형 잡힌 4음보(예: '동창이 밝았느냐 / 노고지리 우지진다 / 소 치는 아이는 / 상기 아니 일었느냐')의 안정된 호흡으로 전개하세요.
+- 음수율: 조선 가사 및 시조의 격조 높은 3·4조 및 4·4조의 보폭을 유지하여 기품과 절제미를 극대화하세요.
+- 종결: 마지막 연에는 '한국 아름다운 문장 1000선'에 필적하는 깊은 인생의 철학적 통찰과 경구를 담아 무게감 있게 완성하세요.`;
+      break;
+    case 'modern_free':
+      prosodyGuideline = `
+[PDF 문헌 학습 운율 지침: 감각적 현대 자유율 (긴 행과 짧은 행의 교차)]
+- 율격 구조: 기계적으로 일정한 행 길이를 단호히 배제하고, 1~3단어의 극도로 절제된 짧은 행과 유려하게 펼쳐지는 긴 행을 유기적으로 교차시키세요.
+- 호흡: 파도가 밀려왔다 부서지듯 호흡의 완급을 조절하고, 행과 행 사이에 시각적·심리적 여백을 두어 감각적인 현대 서정을 살리세요.`;
+      break;
+    case 'meditative_prose':
+      prosodyGuideline = `
+[PDF 문헌 학습 운율 지침: 깊은 사유의 명상적 율격 (유장한 내재율)]
+- 율격 구조: 강물처럼 유장하게 흐르는 산문적 긴 호흡과 내재율을 구사하세요.
+- 호흡: 침묵과 쉼표를 적극 활용하여, 내면의 깊은 고백과 존재에 대한 응시가 묻어나는 장중하고 명상적인 분위기를 연출하세요.`;
+      break;
+    default:
+      prosodyGuideline = `
+[PDF 문헌 학습 운율 지침: 시인풍·감정 맞춤형 최적 운율 자동 조율]
+- [${poetInfo.name}] 시인의 문학적 정체성과 사용자의 감정("${sanitizedEmotion || '서정적 울림'}")에 가장 부합하는 호흡과 음악적 율격을 자연스럽게 융합하세요.
+- 부드러운 울림소리('ㅁ', 'ㄴ', 'ㄹ', 'ㅇ')의 조화로운 배치와 행간의 음악적 리듬을 살려 낭송 시 아름다운 선율이 느껴지도록 하세요.`;
+      break;
+  }
 
   // 금지단어(17대 클리셰) 필터링: 사용자가 직접 입력한 5개 단어나 감정에 포함된 경우만 예외 허용
   const userExplicitText = [...words, sanitizedEmotion].join(' ');
   const activeForbiddenWords = FORBIDDEN_POETIC_WORDS.filter(w => !userExplicitText.includes(w));
 
-  const systemInstruction = `당신은 한국 문학사에 빛나는 명시인들의 시풍과 영혼을 완벽히 체화한 서정시의 대가입니다.
-사용자가 선택한 시인([${poetInfo.name}] - 대표작: '${poetInfo.work}')의 독보적인 문학적 정체성, 특유의 시적 어조, 리듬감, 세계관, 그리고 대표 모티프를 철저히 반영하여, 다섯 단어로 감동적인 한국 현대 서정시를 창작해 주세요.`;
+  const systemInstruction = `당신은 한국 문학사에 빛나는 명시인들의 시풍과 운율을 완벽히 체화한 서정시의 대가입니다.
+사용자가 선택한 시인([${poetInfo.name}] - 대표작: '${poetInfo.work}')의 독보적인 문학적 정체성, 사용자의 감정, 그리고 학습된 시적 운율(리듬·율격)을 3원 융합하여 감동적인 한국 서정시를 창작해 주세요.`;
 
   const userPrompt = `
 [창작 대상 시인 및 시풍]
@@ -2081,6 +2159,8 @@ async function callClientGeminiApi(words, model, mood, apiKey, emotion = '') {
 - 매칭 Google TTS 보이스: ${state.selectedVoiceName}
 ${sanitizedEmotion ? `- [사용자가 담고자 하는 시적 감정 및 테마]: "${sanitizedEmotion}"
 - [감정 융합 지침]: 사용자가 지정한 감정("${sanitizedEmotion}")을 [${poetInfo.name}] 시인 특유의 고유한 시적 어조, 시선, 이미지와 유기적으로 결합하여, 시인의 영혼과 목소리로 사용자의 감정을 노래하듯 깊이 있게 빚어내세요.` : ''}
+
+${prosodyGuideline}
 
 [선택된 다섯 단어]
 1. ${words[0]}
@@ -2098,9 +2178,9 @@ ${activeForbiddenWords.length > 0 ? `다음 단어들은 지나치게 상투적�
 1. 시의 맨 첫 줄은 '# [시의 제목]' 형식으로 작성하세요.
 2. 3~5개의 연으로 구성하고, 연과 연 사이는 빈 줄로 구분하세요.
 3. 제공된 다섯 단어(${words.join(', ')})를 시 본문 속에 자연스럽고 유려하게 녹여내세요.
-4. 시의 어조, 행간의 호흡, 사용하는 시어의 결이 반드시 [${poetInfo.name}] 시인의 고유한 서정과 정확히 일치하도록 심혈을 기울여 주세요.
+4. 시의 어조, 행간의 호흡, 사용하는 시어의 결이 반드시 [${poetInfo.name}] 시인의 고유한 서정 및 요청된 운율 율격과 정확히 일치하도록 심혈을 기울여 주세요.
 5. [완결성 보장]: 시는 절대로 중간에 문맥이나 행이 끊기지 않고 완전히 끝맺어야 합니다. 마지막 연의 마지막 행까지 시적 여운을 담아 완전한 문장으로 종결하세요.
-6. 시 본문이 완결된 후 반드시 '---' 구분선을 넣고, 그 아래에 [${poetInfo.name}] 시인의 시선에서 쓴 2~3문장의 시작노트(감상과 창작 의도)를 끝까지 온전히 작성하세요.
+6. 시 본문이 완결된 후 반드시 '---' 구분선을 넣고, 그 아래에 [${poetInfo.name}] 시인의 시선에서 쓴 2~3문장의 시작노트(감상, 창작 의도 및 반영된 운율감)를 끝까지 온전히 작성하세요.
 7. 군더더기 인사말은 절대 포함하지 마세요.
 `;
 
@@ -2131,8 +2211,10 @@ ${activeForbiddenWords.length > 0 ? `다음 단어들은 지나치게 상투적�
           const data = await response.json();
           const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (rawText) {
+            const parsedPoem = parsePoem(rawText);
+            parsedPoem.prosody_style = prosodyInfo.name;
             return {
-              poem: parsePoem(rawText),
+              poem: parsedPoem,
               usedModel: currentModel,
               fallbackOccurred: currentModel !== model
             };
@@ -2229,10 +2311,12 @@ function parsePoem(rawText) {
 // =========================================================
 // 8. 데모 모드 템플릿 엔진 (33인 시인별 맞춤형 서정 & 감정 결합)
 // =========================================================
-function generateDemoPoem(words, mood, emotion = '') {
+function generateDemoPoem(words, mood, emotion = '', prosodyStyle = 'auto') {
   const [w1, w2, w3, w4, w5] = words;
   const poetInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
+  const prosodyInfo = PROSODY_STYLES[prosodyStyle] || PROSODY_STYLES.auto;
   const emotionSuffix = emotion ? ` (${emotion}의 정서를 담아)` : '';
+  const prosodySuffix = ` [운율: ${prosodyInfo.name}]`;
 
   const demoTemplates = {
     yoon_dongju: {
@@ -2288,14 +2372,21 @@ function generateDemoPoem(words, mood, emotion = '') {
   };
 
   if (demoTemplates[mood]) {
-    return demoTemplates[mood];
+    const t = demoTemplates[mood];
+    return {
+      title: t.title,
+      body: t.body,
+      notes: t.notes + prosodySuffix,
+      prosody_style: prosodyInfo.name
+    };
   }
 
   // 그 외 33인 시인들을 위한 정밀 맞춤 생성기
   return {
     title: `${poetInfo.name} 풍의 ${w1}과 ${w5}${emotionSuffix}`,
     body: `바람이 머물다 가는 자리에서\n가만히 흔들리는 ${w1},\n\n지나간 시간의 잔물결 위로\n아스라이 부서지는 ${w2}의 기억들.\n마음의 심연에 고여 든 ${w3}은\n어둠을 밝히는 한 줄기 빛이 된다.\n\n적어두지 못한 ${w4}를 마음에 품고\n다시금 고요히 대지에 내리는 ${w5},\n생의 침묵 속에 가장 순결한 언어로 피어난다.`,
-    notes: `${poetInfo.name} 시인의 대표작 '${poetInfo.work}'의 시풍(${poetInfo.desc})을 기리며, 다섯 단어(${words.join(', ')})로 깊은 서정을 길어 올렸습니다.${emotion ? ` [부여된 감정: ${emotion}]` : ''}`
+    notes: `${poetInfo.name} 시인의 대표작 '${poetInfo.work}'의 시풍(${poetInfo.desc})을 기리며, 다섯 단어(${words.join(', ')})로 깊은 서정을 길어 올렸습니다.${emotion ? ` [부여된 감정: ${emotion}]` : ''}${prosodySuffix}`,
+    prosody_style: prosodyInfo.name
   };
 }
 
@@ -2311,15 +2402,17 @@ function renderPoem(poemData, words, isLiveAI = false) {
   const poetInfo = POET_DATABASE[state.selectedMood] || POET_DATABASE.yoon_dongju;
   const voiceInfo = GOOGLE_TTS_VOICES[state.selectedVoiceName] || GOOGLE_TTS_VOICES.Iapetus;
   const voiceDisplayName = poemData.voice_name || state.selectedVoiceName;
+  const prosodyLabel = poemData.prosody_style || (state.selectedProsody && state.selectedProsody !== 'auto' ? PROSODY_STYLES[state.selectedProsody]?.name : '');
+  const prosodyTag = prosodyLabel ? ` · 운율: ${prosodyLabel}` : '';
 
   if (poemData.poet) {
     const modelText = isLiveAI ? geminiModelSelect.options[geminiModelSelect.selectedIndex].text.split(' (')[0] : '시원 AI';
-    poemAuthorTag.textContent = `${poemData.poet} 시풍 · ${modelText} · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
+    poemAuthorTag.textContent = `${poemData.poet} 시풍 · ${modelText} · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})${prosodyTag}`;
   } else if (isLiveAI) {
     const modelText = geminiModelSelect.options[geminiModelSelect.selectedIndex].text.split(' (')[0];
-    poemAuthorTag.textContent = `${poetInfo.name} 시풍 · ${modelText} · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
+    poemAuthorTag.textContent = `${poetInfo.name} 시풍 · ${modelText} · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})${prosodyTag}`;
   } else {
-    poemAuthorTag.textContent = `${poetInfo.name} 시풍 · 시원(詩苑) 시인 · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})`;
+    poemAuthorTag.textContent = `${poetInfo.name} 시풍 · 시원(詩苑) 시인 · 낭송: Google ${voiceDisplayName} (${voiceInfo.trait})${prosodyTag}`;
   }
 
   // 시 문단(연, Stanza) 및 문단 내 행(Line) 단위 분할 렌더링

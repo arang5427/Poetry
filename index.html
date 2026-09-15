@@ -25,7 +25,7 @@
       <div class="brand">
         <div class="brand-seal">詩</div>
         <div class="brand-text">
-          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-5</span></h1>
+          <h1 class="brand-title">시원 <span>(詩苑)</span> <span class="app-version-badge" id="appVersionBadge">Ver-6</span></h1>
           <p class="brand-subtitle">AI 한국 서정시 창작소 · 백엔드 보안 운영</p>
         </div>
       </div>
@@ -182,6 +182,23 @@
                   <button type="button" class="emotion-tag-btn" data-emotion="설렘과 희망">설렘과 희망</button>
                   <button type="button" class="emotion-tag-btn" data-emotion="초연한 관조">초연한 관조</button>
                 </div>
+              </div>
+            </div>
+
+            <!-- 시적 운율 & 리듬 튜닝 (PDF 4대 문헌 분석 기반) -->
+            <div class="option-group">
+              <label for="poemProsodySelect" class="option-label">
+                <span class="label-with-icon">🎵 시적 운율 & 리듬 튜닝</span>
+                <span class="version-tip" style="background: #e0f2fe; color: #0369a1;">PDF 4대 문헌 학습</span>
+              </label>
+              <div class="select-wrapper">
+                <select id="poemProsodySelect" class="custom-select">
+                  <option value="auto" selected>자동 최적화 (시인풍 · 감정 맞춤형 율격 조율)</option>
+                  <option value="folk_rhythm">애틋한 7·5조 민요풍 (3음보 서정 · 아련한 가락)</option>
+                  <option value="classical_meter">단정한 3·4 / 4·4조 가사풍 (4음보 정통 기품)</option>
+                  <option value="modern_free">감각적 현대 자유율 (긴 행과 짧은 행의 교차와 여백)</option>
+                  <option value="meditative_prose">깊은 사유의 명상적 율격 (유장한 내재율과 침묵)</option>
+                </select>
               </div>
             </div>
           </div>
@@ -513,7 +530,7 @@
         <div class="security-checklist">
           <h4>🛡️ 정보보안 지침 준수 & 시스템 정보</h4>
           <ul>
-            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-5</span> (17대 클리셰 금지단어 배제 · 한국 대표 시어 159선 무작위 채우기 · 감정 입력 & 시인풍 융합 · 완결성 보장 엔진)</li>
+            <li>✨ <strong>현재 버전</strong>: <span class="app-version-badge">Ver-6</span> (PDF 4대 문헌 분석 기반 운율·시인풍·감정 3단 융합 엔진 · 17대 클리셰 금지어 배제 · 159선 추천 단어)</li>
             <li>✅ <strong>Server-to-Server 통신</strong>: 백엔드 환경에서는 구글 API를 비공개 호출</li>
             <li>✅ <strong>환경변수 격리 (.env)</strong>: 소스 코드에 키를 하드코딩하지 않고 환경변수로 분리</li>
             <li>✅ <strong>Git 유출 차단 (.gitignore)</strong>: 깃허브 커밋 시 .env 파일 원천 배제</li>
