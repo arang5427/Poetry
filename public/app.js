@@ -14,12 +14,14 @@
 // =========================================================
 const APP_VERSION = 'Ver-10';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
+const CLIENT_OPENAI_STORAGE_KEY = 'openai_poet_client_api_key';
 
 const state = {
   // 백엔드 & API 상태
   isBackendOnline: false,
   hasServerKey: false,
   clientKey: localStorage.getItem(CLIENT_STORAGE_KEY) || '',
+  clientOpenAiKey: localStorage.getItem(CLIENT_OPENAI_STORAGE_KEY) || '',
   selectedModel: 'gemini-3.8-flash',
   selectedMood: 'yoon_dongju',
   selectedVoiceName: 'Iapetus',
@@ -1793,12 +1795,14 @@ function setupStaticPagesMode() {
   if (clientKeySection) clientKeySection.classList.remove('hidden');
   if (clearApiKeyBtn) clearApiKeyBtn.classList.remove('hidden');
 
-  if (state.clientKey && state.clientKey.trim().length > 5) {
+  const hasAnyClientKey = (state.clientKey && state.clientKey.trim().length > 5) || (state.clientOpenAiKey && state.clientOpenAiKey.trim().length > 5);
+
+  if (hasAnyClientKey) {
     if (apiStatusBadge) {
-      apiStatusBadge.textContent = 'API 연동 활성';
+      apiStatusBadge.textContent = 'API 연동 활성 (브라우저)';
       apiStatusBadge.className = 'status-badge live';
     }
-    if (apiKeyInput) apiKeyInput.value = state.clientKey;
+    if (apiKeyInput) apiKeyInput.value = state.clientKey || state.clientOpenAiKey;
   } else {
     if (apiStatusBadge) {
       apiStatusBadge.textContent = '데모 모드';
@@ -2678,7 +2682,14 @@ async function handleGeneratePoem() {
         showToast(`🔒 ${engineName} 3인 심사평가위원 합평 및 글다듬기를 거쳐 완성된 서정시입니다 ✨`);
       }
     }
-    // 2순위: GitHub Pages 클라이언트 키
+    // 2-1순위: GitHub Pages 클라이언트 OpenAI 키 (OPEN API 모델 선택 시)
+    else if (!state.isBackendOnline && state.clientOpenAiKey && (state.selectedModel.startsWith('gpt-') || state.selectedModel.startsWith('o1') || state.selectedModel.startsWith('o3'))) {
+      const clientResult = await callClientOpenAiApi(words, state.selectedModel, state.selectedMood, state.clientOpenAiKey, emotion, prosodyStyle);
+      result = clientResult.poem;
+      renderPoem(result, words, true);
+      showToast(`OPEN API (${clientResult.usedModel})로 시가 창작되었습니다 ✨`);
+    }
+    // 2-2순위: GitHub Pages 클라이언트 Gemini 키
     else if (!state.isBackendOnline && state.clientKey && state.clientKey.trim().length > 5) {
       const clientResult = await callClientGeminiApi(words, state.selectedModel, state.selectedMood, state.clientKey, emotion, prosodyStyle);
       result = clientResult.poem;
@@ -2686,7 +2697,7 @@ async function handleGeneratePoem() {
       if (clientResult.fallbackOccurred) {
         showToast(`Gemini AI (${clientResult.usedModel})로 서버 혼잡을 자동 극복하고 시를 창작했습니다 ✨`);
       } else {
-        showToast('Google Gemini AI (3인 심사위원 합평·퇴고)를 통해 시가 창작되었습니다 ✨');
+        showToast('Google Gemini AI를 통해 시가 창작되었습니다 ✨');
       }
     }
     // 3순위: 데모 템플릿
@@ -2879,6 +2890,80 @@ ${activeForbiddenWords.length > 0 ? `다음 단어들은 지나치게 상투적�
   }
 
   throw new Error(`모든 AI 모델 서버가 혼잡합니다. 잠시 후 다시 시도해 주세요. (${lastError})`);
+}
+
+// 클라이언트 OpenAI API 직접 호출 (GitHub Pages 지원)
+async function callClientOpenAiApi(words, model, mood, apiKey, emotion = '', prosodyStyle = 'auto') {
+  const pInfo = POET_DATABASE[mood] || POET_DATABASE.yoon_dongju;
+  const prosodyDef = PROSODY_STYLES[prosodyStyle] || PROSODY_STYLES.auto;
+  const targetModel = model || 'gpt-4o-mini';
+  const modelsToTry = [targetModel, 'gpt-4o-mini', 'gpt-4o'];
+  const uniqueModels = [...new Set(modelsToTry)];
+
+  const systemInstruction = `당신은 한국 최고의 서정시 작가입니다. 5개 단어를 바탕으로 ${pInfo.poet} 시인의 정서와 ${prosodyDef.name} 운율을 조화롭게 녹여낸 서정시를 창작하세요.`;
+  const userPrompt = `
+[창작 조건]
+- 필수 시어 5개: ${words.join(', ')}
+- 지향 시풍: ${pInfo.poet} 시인의 문학적 정서
+- 감정: ${emotion || '깊은 여운과 서정'}
+- 운율: ${prosodyDef.name}
+
+출력 형식:
+# [시 제목]
+
+1연 본문...
+
+2연 본문...
+
+---
+시작노트: ...
+`;
+
+  let lastError = 'OpenAI 응답 없음';
+  for (const curModel of uniqueModels) {
+    const isReasoning = curModel.includes('astra') || curModel.includes('sol') || curModel.startsWith('o1') || curModel.startsWith('o3');
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: curModel,
+          messages: [
+            { role: isReasoning ? 'developer' : 'system', content: systemInstruction },
+            { role: 'user', content: userPrompt }
+          ],
+          ...(isReasoning ? { max_completion_tokens: 2500 } : { max_tokens: 2500, temperature: 0.75 })
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const parsedPoem = parsePoem(content);
+          parsedPoem.prosody_style = prosodyDef.name;
+          return {
+            poem: parsedPoem,
+            usedModel: curModel,
+            fallbackOccurred: curModel !== targetModel
+          };
+        }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        if (response.status === 401) throw new Error(`OpenAI 인증 실패: ${errData.error?.message || '올바르지 않은 API 키입니다.'}`);
+        if (response.status === 404 || errData.error?.code === 'model_not_found') continue;
+        lastError = errData.error?.message || `HTTP ${response.status}`;
+      }
+    } catch (e) {
+      if (e.message && e.message.includes('인증 실패')) throw e;
+      lastError = e.message;
+    }
+  }
+
+  throw new Error(`OpenAI 시 창작 실패: ${lastError}`);
 }
 
 // 시 텍스트 파서 헬퍼 함수 (강화된 완결성 및 유연한 시작노트 파싱)
