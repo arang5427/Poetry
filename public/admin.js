@@ -7,12 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // 상태 관리 객체
   const adminState = {
     activeProvider: 'gemini',
-    defaultOpenaiModel: 'o3-mini',
+    defaultOpenaiModel: 'gpt-6-astra',
     geminiConfigured: false,
     openAiConfigured: false,
     geminiMaskedKey: '',
     openAiMaskedKey: '',
-    models: ['o3-mini', 'o1', 'gpt-4o', 'gpt-4o-mini']
+    models: ['gpt-6-astra', 'gpt-5.5-sol', 'gpt-5.5-terra', 'gpt-5.5-luna']
   };
 
   // DOM 요소 참조
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await resp.json();
 
       adminState.activeProvider = data.activeProvider || 'gemini';
-      adminState.defaultOpenaiModel = data.defaultOpenaiModel || 'o3-mini';
+      adminState.defaultOpenaiModel = data.defaultOpenaiModel || 'gpt-6-astra';
       adminState.geminiConfigured = Boolean(data.gemini?.isConfigured);
       adminState.openAiConfigured = Boolean(data.openai?.isConfigured);
       adminState.geminiMaskedKey = data.gemini?.maskedKey || '미등록';
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================
   testOpenAiBtn.addEventListener('click', async () => {
     const inputKey = openaiKeyInput.value.trim();
-    const modelToTest = selectedOpenAiModelInput.value || 'o3-mini';
+    const modelToTest = selectedOpenAiModelInput.value || 'gpt-6-astra';
 
     openaiTestResult.className = 'test-result-box loading';
     openaiTestResult.classList.remove('hidden');
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveAllConfigBtn.innerHTML = '<span>⏳ .env 동기화 및 저장 중...</span>';
 
     const activeProvider = radioProviderOpenAi.checked ? 'openai' : 'gemini';
-    const defaultOpenaiModel = selectedOpenAiModelInput.value || 'o3-mini';
+    const defaultOpenaiModel = selectedOpenAiModelInput.value || 'gpt-6-astra';
     const openaiApiKey = openaiKeyInput.value.trim();
     const geminiApiKey = geminiKeyInput.value.trim();
 
