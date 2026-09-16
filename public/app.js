@@ -1752,48 +1752,58 @@ async function checkBackendStatus() {
       const data = await res.json();
       state.isBackendOnline = true;
       state.hasServerKey = data.hasServerKey;
+      state.hasOpenAiKey = Boolean(data.hasOpenAiKey);
       const serverVer = data.version || APP_VERSION;
 
-      if (data.hasServerKey) {
-        apiStatusBadge.textContent = `보안 서버 연동 (${serverVer})`;
-        apiStatusBadge.className = 'status-badge live';
-        backendStatusIcon.textContent = '🛡️';
-        backendStatusTitle.textContent = `백엔드 보안 연동 완료 [${serverVer}] (.env 키 암호화)`;
-        backendStatusDetail.innerHTML = '서버의 <code>.env</code> 파일에 등록된 API 키를 사용하여 서버-투-서버로 시를 창작합니다. 브라우저에 API 키가 절대 노출되지 않습니다.';
-        clientKeySection.classList.add('hidden');
-        clearApiKeyBtn.classList.add('hidden');
-      } else {
-        apiStatusBadge.textContent = '.env 키 등록 필요';
-        apiStatusBadge.className = 'status-badge warn';
-        backendStatusIcon.textContent = '⚠️';
-        backendStatusTitle.textContent = '서버 .env 파일에 GEMINI_API_KEY 등록 필요';
-        backendStatusDetail.innerHTML = '서버의 <code>.env</code> 파일에 <code>GEMINI_API_KEY=발급받은키</code>를 입력하시면 즉시 실시간 AI 시 창작이 활성화됩니다.';
-        clientKeySection.classList.add('hidden');
-        clearApiKeyBtn.classList.add('hidden');
+      if (apiStatusBadge) {
+        if (data.hasServerKey || data.hasOpenAiKey) {
+          apiStatusBadge.textContent = `보안 서버 연동 (${serverVer})`;
+          apiStatusBadge.className = 'status-badge live';
+        } else {
+          apiStatusBadge.textContent = '.env 키 등록 필요';
+          apiStatusBadge.className = 'status-badge warn';
+        }
+      }
+
+      if (backendStatusIcon) backendStatusIcon.textContent = (data.hasServerKey || data.hasOpenAiKey) ? '🛡️' : '⚠️';
+      if (backendStatusTitle) backendStatusTitle.textContent = (data.hasServerKey || data.hasOpenAiKey) ? `백엔드 보안 연동 완료 [${serverVer}] (.env 키 암호화)` : '서버 .env 파일에 API 키 등록 필요';
+      if (backendStatusDetail) backendStatusDetail.innerHTML = '서버의 <code>.env</code> 파일에 등록된 API 키를 사용하여 서버-투-서버로 시를 창작합니다. 브라우저에 API 키가 절대 노출되지 않습니다.';
+      if (clientKeySection) clientKeySection.classList.add('hidden');
+      if (clearApiKeyBtn) clearApiKeyBtn.classList.add('hidden');
+
+      // 서버에서 설정된 활성 엔진 및 기본 모델을 프론트엔드 셀렉트에 반영
+      if (data.activeProvider === 'openai' && data.defaultOpenaiModel && geminiModelSelect) {
+        geminiModelSelect.value = data.defaultOpenaiModel;
+        state.selectedModel = data.defaultOpenaiModel;
       }
       return;
     }
   } catch (e) {
     state.isBackendOnline = false;
     state.hasServerKey = false;
+    state.hasOpenAiKey = false;
   }
 
   setupStaticPagesMode();
 }
 
 function setupStaticPagesMode() {
-  backendSecurityInfo.classList.add('hidden');
-  clientKeySection.classList.remove('hidden');
-  clearApiKeyBtn.classList.remove('hidden');
+  if (backendSecurityInfo) backendSecurityInfo.classList.add('hidden');
+  if (clientKeySection) clientKeySection.classList.remove('hidden');
+  if (clearApiKeyBtn) clearApiKeyBtn.classList.remove('hidden');
 
   if (state.clientKey && state.clientKey.trim().length > 5) {
-    apiStatusBadge.textContent = 'API 연동 활성';
-    apiStatusBadge.className = 'status-badge live';
-    apiKeyInput.value = state.clientKey;
+    if (apiStatusBadge) {
+      apiStatusBadge.textContent = 'API 연동 활성';
+      apiStatusBadge.className = 'status-badge live';
+    }
+    if (apiKeyInput) apiKeyInput.value = state.clientKey;
   } else {
-    apiStatusBadge.textContent = '데모 모드';
-    apiStatusBadge.className = 'status-badge';
-    apiKeyInput.value = '';
+    if (apiStatusBadge) {
+      apiStatusBadge.textContent = '데모 모드';
+      apiStatusBadge.className = 'status-badge';
+    }
+    if (apiKeyInput) apiKeyInput.value = '';
   }
 }
 
@@ -2005,55 +2015,67 @@ function setupEventListeners() {
   // 빗소리 & 모달
   ambientSoundBtn.addEventListener('click', toggleRainSound);
 
-  openApiModalBtn.addEventListener('click', () => {
-    if (!state.isBackendOnline && apiKeyInput) {
-      apiKeyInput.value = state.clientKey;
-    }
-    apiModal.classList.remove('hidden');
-  });
-
-  closeApiModalBtn.addEventListener('click', () => {
-    apiModal.classList.add('hidden');
-  });
-
-  closeModalOkBtn.addEventListener('click', () => {
-    if (!state.isBackendOnline && apiKeyInput) {
-      const inputVal = apiKeyInput.value.trim();
-      state.clientKey = inputVal;
-      if (inputVal) {
-        localStorage.setItem(CLIENT_STORAGE_KEY, inputVal);
-        showToast('Gemini API 키가 저장되었습니다 🔑');
-      } else {
-        localStorage.removeItem(CLIENT_STORAGE_KEY);
-        showToast('API 키가 비어있어 데모 모드로 동작합니다.');
+  if (openApiModalBtn) {
+    openApiModalBtn.addEventListener('click', () => {
+      if (!state.isBackendOnline && apiKeyInput) {
+        apiKeyInput.value = state.clientKey;
       }
+      if (apiModal) apiModal.classList.remove('hidden');
+    });
+  }
+
+  if (closeApiModalBtn) {
+    closeApiModalBtn.addEventListener('click', () => {
+      if (apiModal) apiModal.classList.add('hidden');
+    });
+  }
+
+  if (closeModalOkBtn) {
+    closeModalOkBtn.addEventListener('click', () => {
+      if (!state.isBackendOnline && apiKeyInput) {
+        const inputVal = apiKeyInput.value.trim();
+        state.clientKey = inputVal;
+        if (inputVal) {
+          localStorage.setItem(CLIENT_STORAGE_KEY, inputVal);
+          showToast('API 키가 저장되었습니다 🔑');
+        } else {
+          localStorage.removeItem(CLIENT_STORAGE_KEY);
+          showToast('API 키가 비어있어 데모 모드로 동작합니다.');
+        }
+        setupStaticPagesMode();
+      }
+      if (apiModal) apiModal.classList.add('hidden');
+    });
+  }
+
+  if (clearApiKeyBtn) {
+    clearApiKeyBtn.addEventListener('click', () => {
+      state.clientKey = '';
+      localStorage.removeItem(CLIENT_STORAGE_KEY);
+      if (apiKeyInput) apiKeyInput.value = '';
       setupStaticPagesMode();
-    }
-    apiModal.classList.add('hidden');
-  });
+      if (apiModal) apiModal.classList.add('hidden');
+      showToast('API 키가 삭제되어 데모 모드로 전환되었습니다.');
+    });
+  }
 
-  clearApiKeyBtn.addEventListener('click', () => {
-    state.clientKey = '';
-    localStorage.removeItem(CLIENT_STORAGE_KEY);
-    apiKeyInput.value = '';
-    setupStaticPagesMode();
-    apiModal.classList.add('hidden');
-    showToast('API 키가 삭제되어 데모 모드로 전환되었습니다.');
-  });
+  if (toggleKeyVisibility && apiKeyInput) {
+    toggleKeyVisibility.addEventListener('click', () => {
+      if (apiKeyInput.type === 'password') {
+        apiKeyInput.type = 'text';
+        toggleKeyVisibility.textContent = '🔒';
+      } else {
+        apiKeyInput.type = 'password';
+        toggleKeyVisibility.textContent = '👁️';
+      }
+    });
+  }
 
-  toggleKeyVisibility.addEventListener('click', () => {
-    if (apiKeyInput.type === 'password') {
-      apiKeyInput.type = 'text';
-      toggleKeyVisibility.textContent = '🔒';
-    } else {
-      apiKeyInput.type = 'password';
-      toggleKeyVisibility.textContent = '👁️';
-    }
-  });
-
-  apiModal.addEventListener('click', (e) => {
-    if (e.target === apiModal) apiModal.classList.add('hidden');
-  });
+  if (apiModal) {
+    apiModal.addEventListener('click', (e) => {
+      if (e.target === apiModal) apiModal.classList.add('hidden');
+    });
+  }
 
   // [Ver-8] 사진 분석 및 메뉴탭 이벤트 리스너 등록
   setupPhotoAnalysisListeners();
@@ -2506,8 +2528,8 @@ async function handleGeneratePoem() {
   try {
     let result = null;
 
-    // 1순위: 백엔드 보안 호출
-    if (state.isBackendOnline && state.hasServerKey) {
+    // 1순위: 백엔드 보안 호출 (Gemini 또는 OPEN API)
+    if (state.isBackendOnline && (state.hasServerKey || state.hasOpenAiKey)) {
       const response = await fetch('/api/generate-poem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2533,10 +2555,11 @@ async function handleGeneratePoem() {
       }
       renderPoem(result, words, true);
 
+      const engineName = data.provider === 'openai' ? `OPEN API (${data.model})` : `Google Gemini (${data.model})`;
       if (data.fallbackOccurred) {
         showToast(`🔒 서버 혼잡을 극복하고 [${data.model}] 모델로 시가 안전하게 창작되었습니다 ✨`);
       } else {
-        showToast('🔒 3인 심사평가위원 합평 및 글다듬기를 거쳐 완성된 서정시입니다 ✨');
+        showToast(`🔒 ${engineName} 3인 심사평가위원 합평 및 글다듬기를 거쳐 완성된 서정시입니다 ✨`);
       }
     }
     // 2순위: GitHub Pages 클라이언트 키
@@ -3068,7 +3091,7 @@ async function handleReRefinePoem() {
     const prosodyStyle = poemProsodySelect ? poemProsodySelect.value : (state.selectedProsody || 'auto');
 
     let refinedResult = null;
-    if (state.isBackendOnline && state.hasServerKey) {
+    if (state.isBackendOnline && (state.hasServerKey || state.hasOpenAiKey)) {
       const resp = await fetch('/api/refine-poem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

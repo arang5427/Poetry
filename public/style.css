@@ -2367,3 +2367,35 @@ body {
   color: var(--text-muted);
   font-family: var(--font-serif);
 }
+
+.footer-admin-link-wrap {
+  margin-top: 14px;
+}
+
+.admin-entry-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  color: #78716c;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  text-decoration: none;
+  transition: var(--transition);
+  font-family: var(--font-sans);
+}
+
+.admin-entry-link:hover {
+  color: #1e293b;
+  background: #ffffff;
+  border-color: #94a3b8;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.admin-entry-link .gear-icon {
+  font-size: 0.85rem;
+}
+

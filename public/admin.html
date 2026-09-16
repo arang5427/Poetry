@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>시원(詩苑) 관리자 센터 · API 보안 & 연동 통합 관리</title>
+  <meta name="description" content="시원(詩苑) 한국 서정시 AI 창작소 - API 보안 아키텍처 및 Google Gemini / OPEN API 연동 통합 관리 시스템">
+  <!-- Google Fonts: Gowun Batang & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- 관리자 헤더 -->
+  <header class="admin-header">
+    <div class="header-inner">
+      <div class="brand-area">
+        <span class="brand-icon">🏛️</span>
+        <div>
+          <h1 class="brand-title">시원(詩苑) AI 관리자 센터</h1>
+          <p class="brand-sub">API 보안 상태 모니터링 & AI 연동 통합 관리 시스템 (Ver-9)</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="server-status-pill">
+          <span class="pulse-dot"></span>
+          <span id="serverStatusText">보안 서버 구동 중 (Port 3000)</span>
+        </div>
+        <a href="/" class="btn-goto-service" title="공개 서정시 창작 웹서비스로 이동">
+          <span>🌸 공개 웹서비스 바로가기</span>
+          <span class="arrow">&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 관리자 컨테이너 -->
+  <main class="admin-container">
+    <!-- 탭 네비게이션 -->
+    <nav class="admin-tabs" role="tablist">
+      <button class="tab-btn active" data-tab="securityTab" role="tab" aria-selected="true">
+        <span class="tab-icon">🔒</span>
+        <span class="tab-title">API 보안 상태</span>
+        <span class="tab-badge" id="securityBadge">안전</span>
+      </button>
+      <button class="tab-btn" data-tab="integrationTab" role="tab" aria-selected="false">
+        <span class="tab-icon">🔌</span>
+        <span class="tab-title">API 연동 관리 (OPEN API)</span>
+        <span class="tab-badge highlight" id="integrationBadge">설정</span>
+      </button>
+      <button class="tab-btn" data-tab="diagnosticsTab" role="tab" aria-selected="false">
+        <span class="tab-icon">📊</span>
+        <span class="tab-title">시스템 상태 & 진단</span>
+      </button>
+    </nav>
+
+    <!-- 탭 1: 🔒 API 보안 상태 관리 -->
+    <section id="securityTab" class="tab-pane active" role="tabpanel">
+      <div class="pane-header">
+        <div>
+          <h2>API 보안 상태 모니터링</h2>
+          <p>백엔드 Server-to-Server 아키텍처 및 외부 API 비밀키 격리 보안 현황입니다.</p>
+        </div>
+        <button id="refreshSecurityBtn" class="btn-refresh" title="보안 상태 새로고침">🔄 새로고침</button>
+      </div>
+
+      <!-- 상단 요약 카드 그리드 -->
+      <div class="summary-cards-grid">
+        <!-- 카드 1: Google Gemini API 보안 -->
+        <div class="card stat-card" id="geminiSecurityCard">
+          <div class="stat-top">
+            <span class="provider-badge gemini">🔷 Google Gemini</span>
+            <span id="geminiSecStatusBadge" class="status-chip live">연동 확인 중...</span>
+          </div>
+          <div class="stat-body">
+            <div class="key-mask-box">
+              <span class="key-label">등록 키 (마스킹)</span>
+              <code id="geminiMaskedKey" class="masked-code">로딩 중...</code>
+            </div>
+            <div class="security-meta-list">
+              <div class="meta-row">
+                <span class="meta-key">통신 방식</span>
+                <span class="meta-val">비공개 Server-to-Server (REST)</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">브라우저 노출</span>
+                <span class="meta-val highlight-safe">원천 차단 (0% 노출)</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">스마트 폴백</span>
+                <span class="meta-val">5단계 과부하 자동 방어</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 카드 2: OPEN API (OpenAI) 보안 -->
+        <div class="card stat-card" id="openAiSecurityCard">
+          <div class="stat-top">
+            <span class="provider-badge openai">🟢 OPEN API (OpenAI)</span>
+            <span id="openAiSecStatusBadge" class="status-chip warn">연동 확인 중...</span>
+          </div>
+          <div class="stat-body">
+            <div class="key-mask-box">
+              <span class="key-label">등록 키 (마스킹)</span>
+              <code id="openAiMaskedKey" class="masked-code">로딩 중...</code>
+            </div>
+            <div class="security-meta-list">
+              <div class="meta-row">
+                <span class="meta-key">통신 방식</span>
+                <span class="meta-val">Server-to-Server (Bearer 토큰)</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">브라우저 노출</span>
+                <span class="meta-val highlight-safe">원천 차단 (0% 노출)</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-key">최신 모델 풀</span>
+                <span class="meta-val">4종 (o3-mini, o1, gpt-4o, gpt-4o-mini)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 카드 3: 정보보안 규정 준수 현황 -->
+        <div class="card stat-card">
+          <div class="stat-top">
+            <span class="provider-badge security">🛡️ 보안 지침 준수</span>
+            <span class="status-chip live">100% 준수</span>
+          </div>
+          <div class="stat-body">
+            <ul class="compliance-checklist">
+              <li><span class="chk">✅</span> <strong>공개 웹서비스 분리</strong>: 메인 화면 API 버튼 제외</li>
+              <li><span class="chk">✅</span> <strong>.env 환경변수 격리</strong>: 소스 코드 하드코딩 없음</li>
+              <li><span class="chk">✅</span> <strong>Git 유출 방지</strong>: .gitignore 자동 배제</li>
+              <li><span class="chk">✅</span> <strong>DDoS 방어</strong>: IP당 15분 30회 속도 제한</li>
+              <li><span class="chk">✅</span> <strong>민감정보 마스킹</strong>: 오류 시 키 마스킹</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 상세 보안 아키텍처 안내 섹션 -->
+      <div class="card detail-section-card">
+        <h3 class="section-title">🔒 시원(詩苑) 다계층 정보보안 아키텍처</h3>
+        <div class="architecture-flow">
+          <div class="flow-step">
+            <div class="step-num">1</div>
+            <div class="step-info">
+              <h4>공개 웹서비스 (Public Web)</h4>
+              <p>방문자 브라우저에는 오직 다섯 시어와 감정 데이터만 전송되며, API 키 정보는 일체 포함되지 않습니다.</p>
+            </div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-step highlight-node">
+            <div class="step-num">2</div>
+            <div class="step-info">
+              <h4>보안 백엔드 서버 (Node.js/Express)</h4>
+              <p>서버 메모리에 격리된 <code>.env</code> 키를 로드하여 엄격한 Rate Limiting 및 요청 검증 후 AI로 요청합니다.</p>
+            </div>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-step">
+            <div class="step-num">3</div>
+            <div class="step-info">
+              <h4>AI 클라우드 (Google / OpenAI)</h4>
+              <p>서버 간 비공개 암호화(HTTPS) 터널을 통해 고난도 시 창작 및 3인 심사위원 합평 데이터를 안전하게 수신합니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 탭 2: 🔌 API 연동 관리 (OPEN API 및 Gemini) -->
+    <section id="integrationTab" class="tab-pane hidden" role="tabpanel">
+      <div class="pane-header">
+        <div>
+          <h2>API 연동 통합 관리</h2>
+          <p>공개 웹서비스에서 사용할 AI 엔진 공급자 및 OPEN API 최신 모델 4종을 설정합니다.</p>
+        </div>
+      </div>
+
+      <!-- 기본 AI 엔진 공급자 선택 -->
+      <div class="card engine-select-card">
+        <h3 class="section-title">⚙️ 기본 활성 AI 엔진 공급자 선택</h3>
+        <p class="section-desc">공개 웹서비스에서 시를 창작할 때 기본으로 사용할 AI 엔진을 선택하세요.</p>
+        <div class="provider-toggle-group">
+          <label class="provider-radio-card" id="labelProviderGemini">
+            <input type="radio" name="activeAiProvider" value="gemini" id="radioProviderGemini" checked>
+            <div class="radio-content">
+              <span class="engine-icon">🔷</span>
+              <div class="engine-info">
+                <strong>Google Gemini API</strong>
+                <span>Gemini 3.8 Flash · 서정시 특화 감성 엔진</span>
+              </div>
+            </div>
+          </label>
+          <label class="provider-radio-card" id="labelProviderOpenAi">
+            <input type="radio" name="activeAiProvider" value="openai" id="radioProviderOpenAi">
+            <div class="radio-content">
+              <span class="engine-icon">🟢</span>
+              <div class="engine-info">
+                <strong>OPEN API (OpenAI)</strong>
+                <span>최신 4대 모델(o3-mini, o1, gpt-4o, gpt-4o-mini) 지원</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 🟢 OPEN API (OpenAI) 설정 블록 -->
+      <div class="card config-block-card" id="openAiConfigBlock">
+        <div class="block-header">
+          <div class="title-with-badge">
+            <span class="engine-icon">🟢</span>
+            <h3>OPEN API (OpenAI) 연동 메뉴</h3>
+            <span class="badge-feature">신규 추가</span>
+          </div>
+          <span class="badge-tag">최신 모델 4선 지원</span>
+        </div>
+
+        <!-- OPEN API Key 입력란 -->
+        <div class="form-group">
+          <label for="openaiKeyInput" class="form-label">
+            <span>🔑 OPEN API 비밀 키 (OpenAI API Key)</span>
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="link-helper">
+              🔗 OpenAI 플랫폼에서 API Key 발급받기 &rarr;
+            </a>
+          </label>
+          <div class="input-with-action">
+            <input type="password" id="openaiKeyInput" class="custom-input" placeholder="sk-proj-..." autocomplete="off">
+            <button type="button" id="toggleOpenAiKeyVisibility" class="btn-icon" title="키 표시/숨기기">👁️</button>
+            <button type="button" id="testOpenAiBtn" class="btn-test">⚡ 연결 테스트</button>
+          </div>
+          <span class="input-helper">입력된 키는 서버의 <code>.env</code> 파일에 암호화 보관되며 웹 브라우저에는 노출되지 않습니다.</span>
+        </div>
+
+        <!-- 최신 모델 순 4개 선택 카드 -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>🤖 OPEN API 모델 선택 (최신 모델 순 4종)</span>
+            <span class="label-guide">원하시는 모델 카드를 클릭하여 기본 모델로 지정하세요</span>
+          </label>
+
+          <div class="model-cards-grid" id="openaiModelGrid">
+            <!-- 1. o3-mini -->
+            <div class="model-card active" data-model="o3-mini">
+              <div class="model-card-header">
+                <span class="model-name">o3-mini</span>
+                <span class="model-badge new">최신 추론 · 2025</span>
+              </div>
+              <h4 class="model-headline">o3-mini (2025 최신 차세대 고지능 추론)</h4>
+              <p class="model-desc">OpenAI의 최신 추론 엔진으로 빠른 속도와 한국어 서정시의 정교한 운율 및 아포리즘 구조화에 가장 탁월한 지능을 발휘합니다.</p>
+              <div class="model-card-footer">
+                <span class="order-tag">1순위 최신</span>
+                <span class="select-indicator">✓ 선택됨</span>
+              </div>
+            </div>
+
+            <!-- 2. o1 -->
+            <div class="model-card" data-model="o1">
+              <div class="model-card-header">
+                <span class="model-name">o1</span>
+                <span class="model-badge flagship">플래그십 추론</span>
+              </div>
+              <h4 class="model-headline">o1 (심층 추론 및 복합 사고)</h4>
+              <p class="model-desc">인간 시인처럼 깊이 사유하고 문학적 상징과 은유를 고도화하는 심층 추론 플래그십 모델로 원숙한 서정시 창작에 적합합니다.</p>
+              <div class="model-card-footer">
+                <span class="order-tag">2순위 플래그십</span>
+                <span class="select-indicator">선택</span>
+              </div>
+            </div>
+
+            <!-- 3. gpt-4o -->
+            <div class="model-card" data-model="gpt-4o">
+              <div class="model-card-header">
+                <span class="model-name">gpt-4o</span>
+                <span class="model-badge omni">플래그십 옴니</span>
+              </div>
+              <h4 class="model-headline">gpt-4o (최신 옴니 멀티모달 플래그십)</h4>
+              <p class="model-desc">텍스트와 시각적 심상을 아우르는 종합 지능 옴니 모델로, 매우 유려하고 풍부한 문학적 어조와 감성적 합평을 작성합니다.</p>
+              <div class="model-card-footer">
+                <span class="order-tag">3순위 옴니</span>
+                <span class="select-indicator">선택</span>
+              </div>
+            </div>
+
+            <!-- 4. gpt-4o-mini -->
+            <div class="model-card" data-model="gpt-4o-mini">
+              <div class="model-card-header">
+                <span class="model-name">gpt-4o-mini</span>
+                <span class="model-badge speed">고효율 경량 옴니</span>
+              </div>
+              <h4 class="model-headline">gpt-4o-mini (고효율 고속 옴니 모델)</h4>
+              <p class="model-desc">초고속 응답 속도와 경제성을 갖춘 경량 멀티모달 모델로 실시간 서정시 창작 및 테스트에 최적화되어 있습니다.</p>
+              <div class="model-card-footer">
+                <span class="order-tag">4순위 경량</span>
+                <span class="select-indicator">선택</span>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="selectedOpenAiModel" value="o3-mini">
+        </div>
+
+        <!-- 진단 테스트 결과 영역 -->
+        <div id="openaiTestResult" class="test-result-box hidden"></div>
+      </div>
+
+      <!-- 🔷 Google Gemini 설정 블록 -->
+      <div class="card config-block-card" id="geminiConfigBlock">
+        <div class="block-header">
+          <div class="title-with-badge">
+            <span class="engine-icon">🔷</span>
+            <h3>Google Gemini API 연동 메뉴</h3>
+          </div>
+          <span class="badge-tag">스마트 폴백 엔진</span>
+        </div>
+
+        <!-- Gemini API Key 입력란 -->
+        <div class="form-group">
+          <label for="geminiKeyInput" class="form-label">
+            <span>🔑 Google Gemini API 비밀 키 (Gemini API Key)</span>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="link-helper">
+              🔗 Google AI Studio에서 무료 API Key 발급받기 &rarr;
+            </a>
+          </label>
+          <div class="input-with-action">
+            <input type="password" id="geminiKeyInput" class="custom-input" placeholder="AIzaSy..." autocomplete="off">
+            <button type="button" id="toggleGeminiKeyVisibility" class="btn-icon" title="키 표시/숨기기">👁️</button>
+            <button type="button" id="testGeminiBtn" class="btn-test">⚡ 연결 테스트</button>
+          </div>
+          <span class="input-helper">서버 .env의 <code>GEMINI_API_KEY</code>와 실시간 동기화됩니다.</span>
+        </div>
+
+        <!-- Gemini 지원 모델 체인 안내 -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>🤖 지원 Gemini 모델 체인 (과부하 발생 시 자동 폴백)</span>
+          </label>
+          <div class="model-chain-chips">
+            <span class="chain-chip active">gemini-3.8-flash (메인)</span>
+            <span class="chain-chip">gemini-3.7-flash</span>
+            <span class="chain-chip">gemini-3.6-flash</span>
+            <span class="chain-chip">gemini-3.5-flash</span>
+            <span class="chain-chip">gemini-flash-latest</span>
+            <span class="chain-chip">gemini-2.5-pro</span>
+          </div>
+        </div>
+
+        <!-- Gemini 진단 테스트 결과 영역 -->
+        <div id="geminiTestResult" class="test-result-box hidden"></div>
+      </div>
+
+      <!-- 하단 통합 저장 액션 바 -->
+      <div class="action-bar-card">
+        <div class="action-info">
+          <strong>💾 변경 사항 저장 안내</strong>
+          <span>설정을 저장하시면 서버의 <code>.env</code> 파일에 영구 기록되며 서버 재시작 없이 즉시 적용됩니다.</span>
+        </div>
+        <button type="button" id="saveAllConfigBtn" class="btn-primary-large">
+          <span>💾 관리자 설정 영구 저장 및 즉시 적용</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 탭 3: 📊 시스템 상태 & 진단 -->
+    <section id="diagnosticsTab" class="tab-pane hidden" role="tabpanel">
+      <div class="pane-header">
+        <div>
+          <h2>시스템 상태 및 실시간 진단</h2>
+          <p>서버 가동 현황, 포트 상태, Rate Limiting 설정 및 실시간 로그를 확인합니다.</p>
+        </div>
+        <button id="runFullDiagnosticsBtn" class="btn-refresh">⚡ 종합 진단 실행</button>
+      </div>
+
+      <div class="diagnostics-grid">
+        <div class="card diag-card">
+          <h3 class="card-title">🖥️ 서버 환경 정보</h3>
+          <div class="diag-table">
+            <div class="diag-row"><span class="k">서버 프레임워크</span><span class="v">Node.js (Express)</span></div>
+            <div class="diag-row"><span class="k">서비스 버전</span><span class="v" id="diagAppVersion">Ver-9</span></div>
+            <div class="diag-row"><span class="k">서비스 포트</span><span class="v" id="diagPort">3000</span></div>
+            <div class="diag-row"><span class="k">현재 활성 엔진</span><span class="v" id="diagActiveEngine">Google Gemini</span></div>
+            <div class="diag-row"><span class="k">OPEN API 기본 모델</span><span class="v" id="diagDefaultModel">o3-mini</span></div>
+          </div>
+        </div>
+
+        <div class="card diag-card">
+          <h3 class="card-title">🛡️ 방화벽 & 보안 파라미터</h3>
+          <div class="diag-table">
+            <div class="diag-row"><span class="k">Helmet 보안 헤더</span><span class="v highlight-safe">활성화 (CSP 적용)</span></div>
+            <div class="diag-row"><span class="k">Rate Limit (IP당 제한)</span><span class="v">15분당 최대 30회</span></div>
+            <div class="diag-row"><span class="k">요청 페이로드 제한</span><span class="v">10MB (사진 Vision 분석 지원)</span></div>
+            <div class="diag-row"><span class="k">민감 파일 차단</span><span class="v highlight-safe">.env, server.js 직접 접근 403 차단</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 실시간 콘솔 로그 창 -->
+      <div class="card log-console-card">
+        <div class="console-header">
+          <span class="console-title">📜 관리자 시스템 이벤트 로그</span>
+          <button type="button" id="clearLogBtn" class="btn-micro">로그 지우기</button>
+        </div>
+        <div id="adminLogConsole" class="console-body">
+          <div class="log-line info">[SYSTEM] 시원(詩苑) 관리자 센터 초기화 완료.</div>
+          <div class="log-line info">[SECURITY] Server-to-Server 보안 파이프라인 대기 중.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 토스트 알림 메시지 -->
+  <div id="adminToast" class="admin-toast hidden"></div>
+
+  <!-- 관리자 스크립트 -->
+  <script src="admin.js"></script>
+</body>
+</html>
