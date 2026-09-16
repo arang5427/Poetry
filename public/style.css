@@ -639,20 +639,125 @@ body {
 .extracted-words-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .extracted-word-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: #eef2ff;
   border: 1px solid #c7d2fe;
   color: #3730a3;
   font-family: var(--font-serif);
   font-size: 0.84rem;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 14px;
   box-shadow: 0 1px 3px rgba(79, 70, 229, 0.1);
   animation: popIn 0.3s ease;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  position: relative;
+}
+
+.extracted-word-chip:hover {
+  background: #e0e7ff;
+  border-color: #818cf8;
+  color: #1e1b4b;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.15);
+}
+
+.extracted-word-chip .chip-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: #4f46e5;
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.extracted-word-chip .chip-text {
+  transition: color 0.15s ease;
+}
+
+.extracted-word-chip .chip-edit-btn {
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  margin-left: 2px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.extracted-word-chip:hover .chip-edit-btn {
+  opacity: 1;
+}
+
+.extracted-word-chip .chip-edit-btn:hover {
+  transform: scale(1.2);
+  background: rgba(99, 102, 241, 0.15);
+}
+
+/* [Ver-10] 편집 모드 상태 */
+.extracted-word-chip.editing {
+  background: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
+  padding: 3px 6px 3px 8px;
+  cursor: default;
+  transform: none;
+}
+
+.extracted-word-chip .chip-inline-input {
+  border: 1px solid #c7d2fe;
+  background: #f8fafc;
+  color: #1e1b4b;
+  font-family: var(--font-serif);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  width: 82px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.extracted-word-chip .chip-inline-input:focus {
+  border-color: #4f46e5;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+.extracted-word-chip .chip-save-btn {
+  background: #4f46e5;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.extracted-word-chip .chip-save-btn:hover {
+  background: #4338ca;
+  transform: scale(1.05);
 }
 
 @keyframes popIn {
