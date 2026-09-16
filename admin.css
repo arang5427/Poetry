@@ -146,6 +146,59 @@ body {
   animation: pulseAnim 2s infinite;
 }
 
+.server-status-pill.client-mode {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #60a5fa;
+}
+
+.server-status-pill.client-mode .pulse-dot {
+  background-color: #60a5fa;
+  box-shadow: 0 0 8px #60a5fa;
+}
+
+.server-status-pill.offline {
+  background: var(--amber-bg);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--amber-color);
+}
+
+.server-status-pill.offline .pulse-dot {
+  background-color: var(--amber-color);
+  box-shadow: 0 0 8px var(--amber-color);
+}
+
+.env-notice-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  margin-bottom: 22px;
+  font-size: 0.88rem;
+  color: #bfdbfe;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease;
+}
+
+.env-notice-banner.hidden {
+  display: none !important;
+}
+
+.env-notice-banner .banner-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.env-notice-banner .banner-text a {
+  color: #60a5fa;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
 @keyframes pulseAnim {
   0% { transform: scale(0.95); opacity: 0.8; }
   50% { transform: scale(1.25); opacity: 1; }

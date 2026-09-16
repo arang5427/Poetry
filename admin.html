@@ -37,6 +37,14 @@
 
   <!-- 메인 관리자 컨테이너 -->
   <main class="admin-container">
+    <!-- 환경 감지 배너 (GitHub Pages 또는 로컬 서버 모드 안내) -->
+    <div id="envNoticeBanner" class="env-notice-banner hidden">
+      <span class="banner-icon">🌐</span>
+      <div class="banner-text">
+        <strong>GitHub Pages 정적 배포 환경</strong>: 브라우저 직접 통신 모드로 동작 중입니다. 입력하신 API 키는 브라우저(localStorage)에 안전하게 보관되어 시 창작에 즉시 연동됩니다. (보안 .env 백엔드 사용은 로컬 서버 <a href="http://localhost:3000/admin" target="_blank">http://localhost:3000/admin</a> 접속)
+      </div>
+    </div>
+
     <!-- 탭 네비게이션 -->
     <nav class="admin-tabs" role="tablist">
       <button class="tab-btn active" data-tab="securityTab" role="tab" aria-selected="true">
