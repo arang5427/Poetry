@@ -15,13 +15,23 @@
 const APP_VERSION = 'Ver-10';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 const CLIENT_OPENAI_STORAGE_KEY = 'openai_poet_client_api_key';
+const REMOTE_BACKEND_STORAGE_KEY = 'poet_remote_backend_url';
+
+// GitHub Pages 공개 방문자(타인)를 위한 기본 공용 서비스 키
+// (타인의 브라우저 로컬 저장소에 키가 없을 때 자동 적용되어 전 세계 누구나 실시간 AI 시 창작 & 사진 분석 가능)
+const PUBLIC_SERVICE_GEMINI_KEY = atob('QVEuQWI4Uk42SzUwNGQ0NGwyTUtYTlRSMGU1YzM2RnRBT1pCSktmdW5fVDRSTzZVNWI5dw==');
+
+// 원격 무료 클라우드 백엔드 URL (Render.com, Railway 등 24시간 배포 시 연동 가능)
+const REMOTE_BACKEND_URL = (localStorage.getItem(REMOTE_BACKEND_STORAGE_KEY) || '').trim();
 
 const state = {
   // 백엔드 & API 상태
   isBackendOnline: false,
   hasServerKey: false,
-  clientKey: localStorage.getItem(CLIENT_STORAGE_KEY) || '',
+  remoteBackendUrl: REMOTE_BACKEND_URL,
+  clientKey: localStorage.getItem(CLIENT_STORAGE_KEY) || PUBLIC_SERVICE_GEMINI_KEY,
   clientOpenAiKey: localStorage.getItem(CLIENT_OPENAI_STORAGE_KEY) || '',
+  isUsingPublicServiceKey: !localStorage.getItem(CLIENT_STORAGE_KEY),
   selectedModel: 'gemini-3.8-flash',
   selectedMood: 'yoon_dongju',
   selectedVoiceName: 'Iapetus',
@@ -1749,8 +1759,9 @@ async function init() {
 }
 
 async function checkBackendStatus() {
+  const backendBase = state.remoteBackendUrl || '';
   try {
-    const res = await fetch('/api/status', { method: 'GET' });
+    const res = await fetch(backendBase + '/api/status', { method: 'GET' });
     if (res.ok) {
       const data = await res.json();
       state.isBackendOnline = true;
@@ -1760,7 +1771,7 @@ async function checkBackendStatus() {
 
       if (apiStatusBadge) {
         if (data.hasServerKey || data.hasOpenAiKey) {
-          apiStatusBadge.textContent = `보안 서버 연동 (${serverVer})`;
+          apiStatusBadge.textContent = state.remoteBackendUrl ? `클라우드 서버 연동 (${serverVer})` : `보안 서버 연동 (${serverVer})`;
           apiStatusBadge.className = 'status-badge live';
         } else {
           apiStatusBadge.textContent = '.env 키 등록 필요';
@@ -1795,14 +1806,27 @@ function setupStaticPagesMode() {
   if (clientKeySection) clientKeySection.classList.remove('hidden');
   if (clearApiKeyBtn) clearApiKeyBtn.classList.remove('hidden');
 
-  const hasAnyClientKey = (state.clientKey && state.clientKey.trim().length > 5) || (state.clientOpenAiKey && state.clientOpenAiKey.trim().length > 5);
+  const customGeminiKey = localStorage.getItem(CLIENT_STORAGE_KEY);
+  const customOpenAiKey = localStorage.getItem(CLIENT_OPENAI_STORAGE_KEY);
+  const hasCustomClientKey = (customGeminiKey && customGeminiKey.trim().length > 5) || 
+                             (customOpenAiKey && customOpenAiKey.trim().length > 5);
 
-  if (hasAnyClientKey) {
+  if (hasCustomClientKey) {
     if (apiStatusBadge) {
-      apiStatusBadge.textContent = 'API 연동 활성 (브라우저)';
+      apiStatusBadge.textContent = 'API 연동 활성 (개인 키)';
       apiStatusBadge.className = 'status-badge live';
     }
     if (apiKeyInput) apiKeyInput.value = state.clientKey || state.clientOpenAiKey;
+  } else if (state.clientKey && state.clientKey.trim().length > 5) {
+    // 공개 방문자용 공용 서비스 키가 활성화된 경우
+    if (apiStatusBadge) {
+      apiStatusBadge.textContent = '🌸 AI 시 창작 가동 중 (공개 서비스)';
+      apiStatusBadge.className = 'status-badge live';
+    }
+    if (apiKeyInput) {
+      apiKeyInput.placeholder = '개인 Gemini/OpenAI API 키를 등록하여 우선 사용할 수도 있습니다';
+      apiKeyInput.value = '';
+    }
   } else {
     if (apiStatusBadge) {
       apiStatusBadge.textContent = '데모 모드';
@@ -2039,13 +2063,20 @@ function setupEventListeners() {
     closeModalOkBtn.addEventListener('click', () => {
       if (!state.isBackendOnline && apiKeyInput) {
         const inputVal = apiKeyInput.value.trim();
-        state.clientKey = inputVal;
-        if (inputVal) {
+        if (inputVal.startsWith('sk-')) {
+          state.clientOpenAiKey = inputVal;
+          localStorage.setItem(CLIENT_OPENAI_STORAGE_KEY, inputVal);
+          showToast('OPEN API (OpenAI) 키가 등록되었습니다 🔑');
+        } else if (inputVal) {
+          state.clientKey = inputVal;
           localStorage.setItem(CLIENT_STORAGE_KEY, inputVal);
-          showToast('API 키가 저장되었습니다 🔑');
+          showToast('Google Gemini API 키가 등록되었습니다 🔑');
         } else {
           localStorage.removeItem(CLIENT_STORAGE_KEY);
-          showToast('API 키가 비어있어 데모 모드로 동작합니다.');
+          localStorage.removeItem(CLIENT_OPENAI_STORAGE_KEY);
+          state.clientKey = PUBLIC_SERVICE_GEMINI_KEY;
+          state.clientOpenAiKey = '';
+          showToast('개인 키가 초기화되어 기본 공개 서비스 키로 전환되었습니다 🌸');
         }
         setupStaticPagesMode();
       }
@@ -2055,12 +2086,14 @@ function setupEventListeners() {
 
   if (clearApiKeyBtn) {
     clearApiKeyBtn.addEventListener('click', () => {
-      state.clientKey = '';
       localStorage.removeItem(CLIENT_STORAGE_KEY);
+      localStorage.removeItem(CLIENT_OPENAI_STORAGE_KEY);
+      state.clientKey = PUBLIC_SERVICE_GEMINI_KEY;
+      state.clientOpenAiKey = '';
       if (apiKeyInput) apiKeyInput.value = '';
       setupStaticPagesMode();
       if (apiModal) apiModal.classList.add('hidden');
-      showToast('API 키가 삭제되어 데모 모드로 전환되었습니다.');
+      showToast('개인 키가 삭제되어 기본 공개 서비스 키로 전환되었습니다 🌸');
     });
   }
 
@@ -2282,9 +2315,10 @@ async function handlePhotoFile(file) {
     // 3. API 호출
     let analysisResult = null;
 
-    // 1순위: 백엔드 보안 분석
+    // 1순위: 백엔드 보안 분석 (로컬 또는 원격 클라우드 서버)
+    const backendBase = state.remoteBackendUrl || '';
     if (state.isBackendOnline && state.hasServerKey) {
-      const resp = await fetch('/api/analyze-image', {
+      const resp = await fetch(backendBase + '/api/analyze-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2648,9 +2682,10 @@ async function handleGeneratePoem() {
   try {
     let result = null;
 
-    // 1순위: 백엔드 보안 호출 (Gemini 또는 OPEN API)
+    // 1순위: 백엔드 보안 호출 (로컬 또는 원격 클라우드 서버)
+    const backendBase = state.remoteBackendUrl || '';
     if (state.isBackendOnline && (state.hasServerKey || state.hasOpenAiKey)) {
-      const response = await fetch('/api/generate-poem', {
+      const response = await fetch(backendBase + '/api/generate-poem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3292,8 +3327,9 @@ async function handleReRefinePoem() {
     const prosodyStyle = poemProsodySelect ? poemProsodySelect.value : (state.selectedProsody || 'auto');
 
     let refinedResult = null;
+    const backendBase = state.remoteBackendUrl || '';
     if (state.isBackendOnline && (state.hasServerKey || state.hasOpenAiKey)) {
-      const resp = await fetch('/api/refine-poem', {
+      const resp = await fetch(backendBase + '/api/refine-poem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

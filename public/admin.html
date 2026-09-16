@@ -360,6 +360,29 @@
         <div id="geminiTestResult" class="test-result-box hidden"></div>
       </div>
 
+      <!-- 🌐 타인(방문자)을 위한 24시간 원격 클라우드 백엔드 연동 (선택) -->
+      <div class="card config-block-card" id="cloudBackendConfigBlock">
+        <div class="block-header">
+          <div class="title-with-badge">
+            <span class="engine-icon">🌐</span>
+            <h3>타인(방문자) 서비스용 24시간 원격 클라우드 서버 연동 (선택)</h3>
+            <span class="badge-tag">24시간 서비스</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="remoteBackendUrlInput" class="form-label">
+            <span>🚀 원격 백엔드 서버 주소 (Render.com, Railway 등)</span>
+            <span class="label-guide">내 컴퓨터를 꺼두어도 타인이 사용할 수 있도록 클라우드 백엔드 URL을 연결합니다</span>
+          </label>
+          <div class="input-with-action">
+            <input type="url" id="remoteBackendUrlInput" class="custom-input" placeholder="https://your-app.onrender.com" autocomplete="off">
+            <button type="button" id="testRemoteBackendBtn" class="btn-test">⚡ 서버 상태 확인</button>
+          </div>
+          <span class="input-helper">미입력 시 기본적으로 내장된 고성능 Google Gemini 공용 서비스 키가 방문자에게 자동 적용됩니다.</span>
+        </div>
+        <div id="remoteBackendTestResult" class="test-result-box hidden"></div>
+      </div>
+
       <!-- 하단 통합 저장 액션 바 -->
       <div class="action-bar-card">
         <div class="action-info">
