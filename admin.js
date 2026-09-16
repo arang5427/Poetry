@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       // 3. 진단 탭 UI 갱신
-      if (diagAppVersion) diagAppVersion.textContent = data.version || 'Ver-9';
+      if (diagAppVersion) diagAppVersion.textContent = data.version || 'Ver-10';
       if (diagPort) diagPort.textContent = data.port || '3000';
       if (diagActiveEngine) diagActiveEngine.textContent = adminState.activeProvider === 'openai' ? 'OPEN API (OpenAI)' : 'Google Gemini API';
       if (diagDefaultModel) diagDefaultModel.textContent = adminState.defaultOpenaiModel;

@@ -12,7 +12,7 @@
 // =========================================================
 // 1. 상태 및 상수 정의
 // =========================================================
-const APP_VERSION = 'Ver-9';
+const APP_VERSION = 'Ver-10';
 const CLIENT_STORAGE_KEY = 'gemini_poet_client_api_key';
 
 const state = {
@@ -27,11 +27,12 @@ const state = {
   currentPoem: null,
   isGenerating: false,
 
-  // 사진 분석 상태 (Ver-8)
+  // 사진 분석 상태 (Ver-8 / Ver-10)
   isAnalyzingPhoto: false,
   uploadedPhotoBase64: null,
   uploadedPhotoMime: 'image/jpeg',
   photoDescription: '',
+  extractedWords: [],
 
   // 유튜브 BGM 상태
   ytPlayer: null,
@@ -2201,6 +2202,22 @@ function setupPhotoAnalysisListeners() {
       }
     });
   }
+
+  // [Ver-10] 5개 단어 입력창 수정 시 사진 표시창 칩 실시간 양방향 동기화
+  wordInputs.forEach((input, idx) => {
+    if (input) {
+      input.addEventListener('input', () => {
+        if (state.extractedWords && state.extractedWords.length > idx) {
+          state.extractedWords[idx] = input.value.trim();
+          const chip = extractedWordsChips ? extractedWordsChips.querySelector(`.extracted-word-chip[data-index="${idx}"]`) : null;
+          if (chip && !chip.classList.contains('editing')) {
+            const chipText = chip.querySelector('.chip-text');
+            if (chipText) chipText.textContent = input.value.trim() || `(단어 ${idx + 1})`;
+          }
+        }
+      });
+    }
+  });
 }
 
 // 캔버스를 이용한 브라우저 단 이미지 리사이징 & 압축 (최대 1280px, 빠른 업로드 보장)
@@ -2314,15 +2331,8 @@ async function handlePhotoFile(file) {
     if (photoDescriptionText) photoDescriptionText.textContent = description;
     if (photoDescCharCount) photoDescCharCount.textContent = `${description.length}/50자`;
 
-    // 추천 시어 5개 칩 렌더링
-    if (extractedWordsChips) {
-      extractedWordsChips.innerHTML = words.map((w, i) => `
-        <span class="extracted-word-chip" title="단어 ${i + 1} 자동 입력됨">
-          <span class="chip-num">${i + 1}</span>
-          <span class="chip-text">${escapeHtml(w)}</span>
-        </span>
-      `).join('');
-    }
+    // [Ver-10] 추천 시어 5개 칩 렌더링 및 사용자의 단어별 인라인 수정 바인딩
+    renderExtractedWordChips(words);
 
     if (photoAnalyzingState) photoAnalyzingState.classList.add('hidden');
     if (photoDisplayWindow) photoDisplayWindow.classList.remove('hidden');
@@ -2340,24 +2350,129 @@ async function handlePhotoFile(file) {
   }
 }
 
+// =========================================================
+// 6-2. [Ver-10] 추출된 시어 5개 칩 렌더링 및 사용자의 단어별 인라인 수정 기능
+// =========================================================
+function renderExtractedWordChips(words = []) {
+  if (!extractedWordsChips) return;
+  state.extractedWords = [...words];
+
+  extractedWordsChips.innerHTML = words.map((w, i) => `
+    <div class="extracted-word-chip" data-index="${i}" title="단어 ${i + 1}: 클릭하여 단어 수정 ✏️">
+      <span class="chip-num">${i + 1}</span>
+      <span class="chip-text">${escapeHtml(w)}</span>
+      <button type="button" class="chip-edit-btn" data-index="${i}" title="단어 ${i + 1} 직접 수정">✏️</button>
+    </div>
+  `).join('');
+
+  const chipElements = extractedWordsChips.querySelectorAll('.extracted-word-chip');
+  chipElements.forEach(chip => {
+    const idx = parseInt(chip.getAttribute('data-index'), 10);
+    const editBtn = chip.querySelector('.chip-edit-btn');
+    const chipText = chip.querySelector('.chip-text');
+
+    function startEditing(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (chip.classList.contains('editing')) return;
+
+      const currentWord = (wordInputs[idx] ? wordInputs[idx].value.trim() : '') || (chipText ? chipText.textContent.trim() : '');
+      chip.classList.add('editing');
+      chip.innerHTML = `
+        <span class="chip-num">${idx + 1}</span>
+        <input type="text" class="chip-inline-input" value="${escapeHtml(currentWord)}" maxlength="15" placeholder="시어 입력" />
+        <button type="button" class="chip-save-btn" title="저장">✓</button>
+      `;
+
+      const input = chip.querySelector('.chip-inline-input');
+      const saveBtn = chip.querySelector('.chip-save-btn');
+      let isSaved = false;
+
+      function saveWord() {
+        if (isSaved) return;
+        isSaved = true;
+        const newWord = (input.value || '').trim();
+        if (newWord.length > 0) {
+          if (wordInputs[idx]) {
+            wordInputs[idx].value = newWord;
+            wordInputs[idx].classList.remove('input-pulse');
+            void wordInputs[idx].offsetWidth;
+            wordInputs[idx].classList.add('input-pulse');
+          }
+          state.extractedWords[idx] = newWord;
+          showToast(`단어 ${idx + 1}이(가) '${newWord}'(으)로 수정되었습니다 ✏️`);
+        }
+        renderExtractedWordChips(state.extractedWords);
+      }
+
+      input.focus();
+      input.select();
+
+      input.addEventListener('keydown', (ke) => {
+        if (ke.key === 'Enter') {
+          ke.preventDefault();
+          saveWord();
+        } else if (ke.key === 'Escape') {
+          isSaved = true;
+          renderExtractedWordChips(state.extractedWords);
+        }
+      });
+
+      saveBtn.addEventListener('click', (se) => {
+        se.stopPropagation();
+        saveWord();
+      });
+
+      input.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (chip.classList.contains('editing') && !isSaved) {
+            saveWord();
+          }
+        }, 150);
+      });
+    }
+
+    chip.addEventListener('click', (e) => {
+      if (!chip.classList.contains('editing')) {
+        startEditing(e);
+      }
+    });
+
+    if (editBtn) {
+      editBtn.addEventListener('click', startEditing);
+    }
+  });
+}
+
 // 클라이언트 Gemini Vision 멀티모달 호출 (GitHub Pages 지원)
 async function callClientGeminiVisionApi(base64Data, mimeType, apiKey, model = 'gemini-3.8-flash') {
   const cleanBase64 = base64Data.replace(/^data:[^;]+;base64,/, '').trim();
   const modelsToTry = [model, ...CLIENT_FALLBACK_CHAIN.filter(m => m !== model)];
 
-  const systemInstruction = `당신은 사진에 깃든 시각적 정서와 서정적 울림을 예리하게 포착하는 한국 서정시 예술가입니다.
-사진을 감상하고, 사진의 분위기, 색채, 빛과 어둠, 계절감, 자연물, 서정적 심상을 종합 분석하여 한국어 서정 시어 5개와 50자 이내의 함축적인 시적 설명을 작성하세요.`;
+  const systemInstruction = `당신은 사진에 깃든 시각적 정서와 서정적 울림을 예리하게 포착하는 한국 서정시 예술가이자 사진 미학 분석가입니다.
+제공된 사진의 [사진적 구도, 분위기, 전체적 맥락, 감성, 피사체의 행동 분석]을 심층적으로 종합 분석하여, 50자 이내의 밀도 높은 사진 감성 설명과 그 분석 내용을 바탕으로 긴밀히 연계된 한국어 서정 시어 5개를 도출하세요.`;
 
   const userPrompt = `
 제공된 사진을 깊이 있게 관찰하고 분석하여 다음 두 가지를 유효한 JSON 형식으로만 응답해 주세요:
 
-1. "description": 사진에 나타난 정경과 서정적 분위기를 감성적으로 묘사한 설명 (반드시 공백 포함 한국어 50자 이내).
-2. "words": 이 사진의 모티프와 정서를 가장 잘 대변하는 아름다운 한국어 서정 시어(명사) 정확히 5개 배열.
+[📸 5대 심층 분석 필수 반영 지침]
+다음 5가지 요소를 종합적으로 분석하여 감성 설명과 추천 시어에 녹여내세요:
+1. 사진적 구도 (Composition & Framing): 피사체 배치, 원근감, 삼분할/대칭/여백, 앵글, 시선의 흐름
+2. 분위기 (Atmosphere & Mood): 빛과 그림자, 조명, 색온도, 명암 대비, 공기감
+3. 전체적 맥락 (Overall Context): 계절, 시간대, 공간적 배경과 서사적 상황
+4. 감성 (Poetic Emotion): 사진 전체가 자아내는 내밀한 시적 여운, 정서적 울림
+5. 피사체의 행동 분석 (Subject Action/State): 인물/동물/자연물/사물의 구체적인 움직임, 머무름, 시선, 흔들림 등의 동적 상태
+
+[📝 출력 항목]
+1. "description": 위 5대 요소(구도·분위기·맥락·감성·피사체 행동)를 유기적으로 한데 응축하여 시적으로 묘사한 사진 감성 설명 (반드시 공백 포함 한국어 50자 이내).
+2. "words": 위 사진 감성 설명 및 5대 심층 분석 내용(구도, 피사체의 행동, 분위기 등)을 바탕으로 이와 가장 밀접하게 연계된 아름다운 한국어 서정 시어(명사) 정확히 5개 배열.
 
 [🚨 엄격한 시어 선정 지침 (Negative Constraints)]
 - 다음 17개 상투적 클리셰 시어는 절대로 words에 포함하지 마세요:
 [${FORBIDDEN_POETIC_WORDS.join(', ')}]
-- 17대 금지어 대신, 사진 속 구체적인 사물, 색감, 자연물, 감각적 시어(예: 윤슬, 달빛, 노을, 파도, 숲, 이슬, 바람결, 그늘, 모래, 황혼, 등불, 바다 등)를 적극 선정하세요.
+- 17대 금지어 대신, 사진 속 구도와 피사체의 구체적 행동, 사물, 색감, 자연물, 감각적 시어(예: 윤슬, 달빛, 노을, 파도, 숲, 이슬, 바람결, 그늘, 모래, 황혼, 등불, 바다, 날갯짓, 쉼, 침묵 등)를 적극 선정하세요.
 - 각 시어는 군더더기 없는 순수 명사 1~3단어 길이로 작성하세요.
 
 반드시 다른 부연설명 없이 오직 아래와 같은 유효한 JSON 형식으로만 출력하세요:
@@ -2434,7 +2549,7 @@ async function callClientGeminiVisionApi(base64Data, mimeType, apiKey, model = '
   throw new Error(`사진 분석에 실패했습니다. (${lastError})`);
 }
 
-// 데모 모드 사진 분석 생성기
+// [Ver-10] 데모 모드 사진 분석 생성기 (구도·분위기·맥락·감성·피사체 행동 5대 요소 종합 반영)
 function generateDemoPhotoAnalysis() {
   const selectablePool = KOREAN_POETIC_WORDS_159.filter(w => !FORBIDDEN_POETIC_WORDS.includes(w));
   const shuffled = [...selectablePool];
@@ -2444,14 +2559,14 @@ function generateDemoPhotoAnalysis() {
   }
   const words = shuffled.slice(0, 5);
   const sampleDescriptions = [
-    '황혼녘 붉게 물든 노을과 은빛 파도가 일렁이는 고요한 바다 풍경',
-    '아침 햇살에 반짝이는 풀잎과 잔잔한 바람이 빚어낸 맑은 서정',
-    '새벽 안개 짙게 내려앉은 숲길과 아련한 빛의 따스한 여운',
-    '달빛 어린 고요한 창가에서 길어 올린 아늑하고 깊은 사유의 공간',
-    '눈부신 햇살 아래 소박하게 피어난 들꽃의 순수하고 다정한 미소'
+    '황혼의 낮은 앵글 속, 붉은 노을을 향해 걸어가는 그림자의 아련한 침묵',
+    '여백 가득한 흑백 구도, 차가운 빗줄기를 온몸으로 견디는 나뭇가지의 고요',
+    '황금빛 역광 아래, 날갯짓을 멈추고 수면에 내려앉는 새 한 마리의 평온',
+    '대각선 프레임 너머, 창가에 기대어 먼 지평선을 응시하는 이의 쓸쓸한 사유',
+    '푸른 새벽빛 여명 속, 잔잔히 피어오르는 물안개를 가만히 응시하는 새벽길'
   ];
   const description = sampleDescriptions[Math.floor(Math.random() * sampleDescriptions.length)];
-  return { success: true, words, description, model: '시원 AI Vision 데모' };
+  return { success: true, words, description, model: '시원 AI Vision 데모 (Ver-10)' };
 }
 
 // 업로드된 사진 제거
@@ -2459,6 +2574,7 @@ function clearUploadedPhoto() {
   state.uploadedPhotoBase64 = null;
   state.uploadedPhotoMime = 'image/jpeg';
   state.photoDescription = '';
+  state.extractedWords = [];
   if (photoDisplayImg) photoDisplayImg.src = '';
   if (photoThumbnail) photoThumbnail.src = '';
   if (photoDescriptionText) photoDescriptionText.textContent = '';
