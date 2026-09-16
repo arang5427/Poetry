@@ -1,4 +1,3 @@
-<!-- 시원(詩苑) 관리자 센터 루트 미러 (public/admin.html과 동기화됨) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -118,7 +117,7 @@
               </div>
               <div class="meta-row">
                 <span class="meta-key">최신 모델 풀</span>
-                <span class="meta-val">4종 (o3-mini, o1, gpt-4o, gpt-4o-mini)</span>
+                <span class="meta-val">4종 (GPT-6 Astra, GPT-5.5 sol, GPT-5.5 Terra, GPT-5.5 Luna)</span>
               </div>
             </div>
           </div>
@@ -203,7 +202,7 @@
               <span class="engine-icon">🟢</span>
               <div class="engine-info">
                 <strong>OPEN API (OpenAI)</strong>
-                <span>최신 4대 모델(o3-mini, o1, gpt-4o, gpt-4o-mini) 지원</span>
+                <span>최신 4대 모델(GPT-6 Astra, GPT-5.5 sol, GPT-5.5 Terra, GPT-5.5 Luna) 지원</span>
               </div>
             </div>
           </label>
@@ -245,63 +244,63 @@
           </label>
 
           <div class="model-cards-grid" id="openaiModelGrid">
-            <!-- 1. o3-mini -->
-            <div class="model-card active" data-model="o3-mini">
+            <!-- 1. GPT-6 Astra -->
+            <div class="model-card active" data-model="gpt-6-astra">
               <div class="model-card-header">
-                <span class="model-name">o3-mini</span>
-                <span class="model-badge new">최신 추론 · 2025</span>
+                <span class="model-name">GPT-6 Astra</span>
+                <span class="model-badge new">GPT-6 플래그십 · 최신</span>
               </div>
-              <h4 class="model-headline">o3-mini (2025 최신 차세대 고지능 추론)</h4>
-              <p class="model-desc">OpenAI의 최신 추론 엔진으로 빠른 속도와 한국어 서정시의 정교한 운율 및 아포리즘 구조화에 가장 탁월한 지능을 발휘합니다.</p>
+              <h4 class="model-headline">GPT-6 Astra (차세대 초지능 플래그십)</h4>
+              <p class="model-desc">OpenAI 6세대 최상위 플래그십 엔진으로, 깊은 문학적 영감과 무한한 서정적 심상을 완벽히 형상화하는 최신 초지능 모델입니다.</p>
               <div class="model-card-footer">
-                <span class="order-tag">1순위 최신</span>
+                <span class="order-tag">1순위 플래그십</span>
                 <span class="select-indicator">✓ 선택됨</span>
               </div>
             </div>
 
-            <!-- 2. o1 -->
-            <div class="model-card" data-model="o1">
+            <!-- 2. GPT-5.5 sol -->
+            <div class="model-card" data-model="gpt-5.5-sol">
               <div class="model-card-header">
-                <span class="model-name">o1</span>
-                <span class="model-badge flagship">플래그십 추론</span>
+                <span class="model-name">GPT-5.5 sol</span>
+                <span class="model-badge flagship">고지능 추론</span>
               </div>
-              <h4 class="model-headline">o1 (심층 추론 및 복합 사고)</h4>
-              <p class="model-desc">인간 시인처럼 깊이 사유하고 문학적 상징과 은유를 고도화하는 심층 추론 플래그십 모델로 원숙한 서정시 창작에 적합합니다.</p>
+              <h4 class="model-headline">GPT-5.5 sol (태양의 온기와 고도의 추론)</h4>
+              <p class="model-desc">찬란한 생명력과 따스한 감성, 정교한 율격 조탁 능력을 결합하여 삶의 희망과 역동적 서정을 빚어내는 고성능 추론 엔진입니다.</p>
               <div class="model-card-footer">
-                <span class="order-tag">2순위 플래그십</span>
+                <span class="order-tag">2순위 추론</span>
                 <span class="select-indicator">선택</span>
               </div>
             </div>
 
-            <!-- 3. gpt-4o -->
-            <div class="model-card" data-model="gpt-4o">
+            <!-- 3. GPT-5.5 Terra -->
+            <div class="model-card" data-model="gpt-5.5-terra">
               <div class="model-card-header">
-                <span class="model-name">gpt-4o</span>
-                <span class="model-badge omni">플래그십 옴니</span>
+                <span class="model-name">GPT-5.5 Terra</span>
+                <span class="model-badge omni">균형 플래그십</span>
               </div>
-              <h4 class="model-headline">gpt-4o (최신 옴니 멀티모달 플래그십)</h4>
-              <p class="model-desc">텍스트와 시각적 심상을 아우르는 종합 지능 옴니 모델로, 매우 유려하고 풍부한 문학적 어조와 감성적 합평을 작성합니다.</p>
+              <h4 class="model-headline">GPT-5.5 Terra (대지의 깊이와 원숙한 문학성)</h4>
+              <p class="model-desc">사유의 깊이와 전통 서정시의 기품 있는 격조를 단아하게 빚어내며, 인간 실존과 자연의 섭리를 균형 있게 노래합니다.</p>
               <div class="model-card-footer">
-                <span class="order-tag">3순위 옴니</span>
+                <span class="order-tag">3순위 대지</span>
                 <span class="select-indicator">선택</span>
               </div>
             </div>
 
-            <!-- 4. gpt-4o-mini -->
-            <div class="model-card" data-model="gpt-4o-mini">
+            <!-- 4. GPT-5.5 Luna -->
+            <div class="model-card" data-model="gpt-5.5-luna">
               <div class="model-card-header">
-                <span class="model-name">gpt-4o-mini</span>
-                <span class="model-badge speed">고효율 경량 옴니</span>
+                <span class="model-name">GPT-5.5 Luna</span>
+                <span class="model-badge speed">초고속 감성</span>
               </div>
-              <h4 class="model-headline">gpt-4o-mini (고효율 고속 옴니 모델)</h4>
-              <p class="model-desc">초고속 응답 속도와 경제성을 갖춘 경량 멀티모달 모델로 실시간 서정시 창작 및 테스트에 최적화되어 있습니다.</p>
+              <h4 class="model-headline">GPT-5.5 Luna (달빛의 서정과 초고속 감성)</h4>
+              <p class="model-desc">초고속 응답 속도와 밤하늘 달빛처럼 섬세하고 투명한 서정 시어를 창작하는 감성 특화 고효율 모델입니다.</p>
               <div class="model-card-footer">
-                <span class="order-tag">4순위 경량</span>
+                <span class="order-tag">4순위 달빛</span>
                 <span class="select-indicator">선택</span>
               </div>
             </div>
           </div>
-          <input type="hidden" id="selectedOpenAiModel" value="o3-mini">
+          <input type="hidden" id="selectedOpenAiModel" value="gpt-6-astra">
         </div>
 
         <!-- 진단 테스트 결과 영역 -->
