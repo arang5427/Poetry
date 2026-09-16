@@ -53,6 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const geminiTestResult = document.getElementById('geminiTestResult');
   const selectedOpenAiModelInput = document.getElementById('selectedOpenAiModel');
   const openaiModelCards = document.querySelectorAll('.model-card');
+  const remoteBackendUrlInput = document.getElementById('remoteBackendUrlInput');
+  const testRemoteBackendBtn = document.getElementById('testRemoteBackendBtn');
+  const remoteBackendTestResult = document.getElementById('remoteBackendTestResult');
   const saveAllConfigBtn = document.getElementById('saveAllConfigBtn');
 
   // 진단 및 로그 요소
@@ -293,7 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (diagAppVersion) diagAppVersion.textContent = 'Ver-10';
     if (diagPort) diagPort.textContent = adminState.isBackendOnline ? '3000 (보안 REST)' : (isGitHubPages ? 'HTTPS (GitHub Pages 정적 배포)' : '클라이언트 로컬');
     if (diagActiveEngine) diagActiveEngine.textContent = adminState.activeProvider === 'openai' ? 'OPEN API (OpenAI)' : 'Google Gemini API';
-    if (diagDefaultModel) diagDefaultModel.textContent = adminState.defaultOpenaiModel;
+    // 4. 원격 클라우드 서버 URL UI 반영
+    if (remoteBackendUrlInput) remoteBackendUrlInput.value = localStorage.getItem('poet_remote_backend_url') || '';
   }
 
   // =========================================================
@@ -303,8 +307,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5-1. Gemini 브라우저 직접 Ping
   async function testGeminiClientDirect(apiKey) {
     const startTime = Date.now();
-    // 실제 지원 모델 우선 순위
-    const candidateModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+    // 2026 활성 모델 우선 순위
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-flash-latest'];
     let lastError = null;
 
     for (const curModel of candidateModels) {
@@ -628,6 +632,62 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================
+  // 7-2. 원격 클라우드 백엔드 연결 테스트
+  // =========================================================
+  if (testRemoteBackendBtn) {
+    testRemoteBackendBtn.addEventListener('click', async () => {
+      const url = (remoteBackendUrlInput ? remoteBackendUrlInput.value.trim() : '').replace(/\/+$/, '');
+      if (!url) {
+        showToast('원격 백엔드 서버 URL(https://...)을 입력해 주세요.');
+        return;
+      }
+
+      if (!remoteBackendTestResult) return;
+      remoteBackendTestResult.className = 'test-result-box loading';
+      remoteBackendTestResult.classList.remove('hidden');
+      remoteBackendTestResult.innerHTML = `<span>⏳ [${url}] 원격 백엔드 서버에 핑을 전송 중입니다...</span>`;
+      testRemoteBackendBtn.disabled = true;
+
+      const startTime = Date.now();
+      try {
+        const resp = await fetch(url + '/api/status');
+        const elapsed = Date.now() - startTime;
+        const text = await resp.text();
+        let data = {};
+        try { data = JSON.parse(text); } catch (e) { data = {}; }
+
+        if (resp.ok && data.status === 'online') {
+          remoteBackendTestResult.className = 'test-result-box success';
+          remoteBackendTestResult.innerHTML = `
+            <div>
+              <strong>✅ 원격 클라우드 백엔드 연결 성공!</strong>
+              <p style="margin-top:4px; font-size:0.82rem;">버전: <code>${data.version || 'Ver-10'}</code> · 활성 엔진: <code>${data.activeProvider || 'gemini'}</code> · 응답 지연: <strong>${elapsed}ms</strong></p>
+              <p style="margin-top:2px; font-size:0.8rem; color:#10b981;">🚀 이제 내 컴퓨터를 꺼두어도 타인(방문자)이 이 클라우드 서버를 통해 24시간 실시간 AI 시를 창작할 수 있습니다.</p>
+            </div>
+          `;
+          logMessage(`[TEST] 원격 클라우드 서버(${url}) 연결 성공 (${elapsed}ms)`, 'success');
+          showToast(`원격 백엔드 서버 연결 성공! ⚡ (${elapsed}ms)`);
+        } else {
+          throw new Error(data.error || `HTTP ${resp.status}`);
+        }
+      } catch (err) {
+        remoteBackendTestResult.className = 'test-result-box error';
+        remoteBackendTestResult.innerHTML = `
+          <div>
+            <strong>❌ 원격 백엔드 서버 연결 실패</strong>
+            <p style="margin-top:4px; font-size:0.82rem;">오류 내용: ${err.message}</p>
+            <p style="margin-top:2px; font-size:0.78rem; opacity:0.85;">서버 주소 및 CORS 설정을 확인해 주세요.</p>
+          </div>
+        `;
+        logMessage(`[TEST] 원격 백엔드 연결 실패: ${err.message}`, 'error');
+        showToast(`원격 백엔드 연결 실패: ${err.message}`);
+      } finally {
+        testRemoteBackendBtn.disabled = false;
+      }
+    });
+  }
+
+  // =========================================================
   // 8. 관리자 설정 저장 (로컬 .env 또는 브라우저 로컬 저장소)
   // =========================================================
   if (saveAllConfigBtn) {
@@ -648,6 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem('poet_client_active_provider', activeProvider);
           localStorage.setItem('openai_poet_client_model', defaultOpenaiModel);
 
+          if (remoteBackendUrlInput) localStorage.setItem('poet_remote_backend_url', remoteBackendUrlInput.value.trim());
           showToast('🎉 브라우저 로컬 저장소에 API 키와 모델 설정이 안전하게 저장되었습니다!');
           logMessage(`[SAVE] 브라우저(localStorage) 설정 저장 완료 (활성 엔진: ${activeProvider}, 모델: ${defaultOpenaiModel})`, 'success');
 
@@ -673,6 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
             logMessage(`[SAVE] .env 설정 저장 완료 (활성: ${data.activeProvider}, 모델: ${data.defaultOpenaiModel})`, 'success');
             if (openaiKeyInput) openaiKeyInput.value = '';
             if (geminiKeyInput) geminiKeyInput.value = '';
+            if (remoteBackendUrlInput) localStorage.setItem('poet_remote_backend_url', remoteBackendUrlInput.value.trim());
             await initAdminStatus();
           } else {
             throw new Error(data.error || '저장에 실패했습니다.');
